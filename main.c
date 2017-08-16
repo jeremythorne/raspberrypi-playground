@@ -26,9 +26,15 @@
  * LIABILITY TO THE AUTHORS FOR ANY CLAIM OR DAMAGE.
  */
 
+#define GLES3 0
+
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#if GLES3
 #include <GLES3/gl31.h>
+#else
+#include <GLES2/gl2.h>
+#endif
 #include <assert.h>
 #include <fcntl.h>
 #include <gbm.h>
@@ -71,7 +77,12 @@ main (int32_t argc, char* argv[])
    assert (strstr (egl_extension_st, "EGL_KHR_surfaceless_context") != NULL);
 
    static const EGLint config_attribs[] = {
-      EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+      EGL_RENDERABLE_TYPE, 
+#if GLES3
+      EGL_OPENGL_ES3_BIT_KHR,
+#else
+      EGL_OPENGL_ES2_BIT,
+#endif
       EGL_NONE
    };
    EGLConfig cfg;
@@ -84,7 +95,11 @@ main (int32_t argc, char* argv[])
    assert (res);
 
    static const EGLint attribs[] = {
+#if GLES3
       EGL_CONTEXT_CLIENT_VERSION, 3,
+#else
+      EGL_CONTEXT_CLIENT_VERSION, 2,
+#endif
       EGL_NONE
    };
    EGLContext core_ctx = eglCreateContext (egl_dpy,
@@ -96,6 +111,7 @@ main (int32_t argc, char* argv[])
    res = eglMakeCurrent (egl_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, core_ctx);
    assert (res);
 
+#if GLES3
    /* print some compute limits (not strictly necessary) */
    GLint work_group_count[3] = {0};
    for (unsigned i = 0; i < 3; i++)
@@ -156,6 +172,8 @@ main (int32_t argc, char* argv[])
 
    /* free stuff */
    glDeleteProgram (shader_program);
+#endif
+
    eglDestroyContext (egl_dpy, core_ctx);
    eglTerminate (egl_dpy);
    gbm_device_destroy (gbm);
