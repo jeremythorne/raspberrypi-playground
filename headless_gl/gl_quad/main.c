@@ -20,7 +20,14 @@ struct egl_s {
 struct {
     unsigned int w, h;
     unsigned int fbo;
+    unsigned int fb_texture;
     unsigned int texture;
+    unsigned int vbo;
+    unsigned int vertex_shader;
+    unsigned int fragment_shader;
+    unsigned int program;
+    int a_vertex_location;
+    int t_tex_location;
 } gl;
 
 bool init_egl() {
@@ -61,6 +68,15 @@ bool init_egl() {
     return true;
 }
 
+bool check_gl_error(const char * str) {
+    int status = glGetError();
+    if(status != GL_NO_ERROR) {
+        printf("GL error %s %x\n", str, status);
+        return false;
+    }
+    return true;
+}
+
 bool init_gl(void) {
     //Framebuffer
     glGenFramebuffers(1, &gl.fbo);
@@ -68,44 +84,161 @@ bool init_gl(void) {
 
     gl.w = gl.h = 256;
 
-    glGenTextures(1, &gl.texture);
-    glBindTexture(GL_TEXTURE_2D, gl.texture);
+    glGenTextures(1, &gl.fb_texture);
+    glBindTexture(GL_TEXTURE_2D, gl.fb_texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.w, gl.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
-                    GL_TEXTURE_2D, gl.texture, 0);
+                    GL_TEXTURE_2D, gl.fb_texture, 0);
 
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        printf("framebuffer incomplete\n");
         return false;
 
     //Viewport
     glViewport(0, 0, gl.w, gl.h);
 
-    //TODO
-    //vertices, vbo, vertex attrib
-    //program, shader source, compile, link, check
-    //texture, data, params, active, 
+    if(!check_gl_error("framebuffer"))
+        return false;
 
+    //vertices, vbo
+    const float vertices[] = {
+        0.0f, 0.0f,
+        0,0f, 1.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f
+    };
+    glGenBuffers(1, &gl.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, gl.vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    //texture, data, params, active, 
+    
+    glGenTextures(1, &gl.texture);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gl.texture);
+    unsigned char * data = malloc(gl.w*gl.h*4);
+    for(int y = 0; y < gl.h; y++) {
+        for(int x = 0; x < gl.w; x++) {
+            data[x * 4 + y * gl.w * 4] =
+                (x & 0xff)      |
+                (y & 0xff) << 8 |
+                128      << 16  |
+                0xff     << 24;
+        }
+    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.w, gl.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    free(data);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    if(!check_gl_error("texture"))
+        return false;
+
+    //program, shader source, compile, link, check, vertex attrib
+    gl.program = glCreateProgram();
+    const char vertex_shader_source = 
+        "attribute vec2 a_vertex;"
+        "varying vec2 v_texcoord;"
+        "void main(void) {"
+        "   v_texcoord = a_vertex;"
+        "   gl_position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.0f, 1.0f);"
+        "}";
+    const char fragment_shader_source =
+        "uniform sampler2D t_tex;"
+        "varying vec2 v_texcoord;"
+        "void main(void) {"
+        "   glFragColor = texture2D(t_tex, v_texcoord);"
+        "}";
+    gl.vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    gl.fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    int vertex_shader_size = sizeof(vertex_shader_source);
+    glShaderSource(gl.vertex_shader, 1, &vertex_shader_source, &vertex_shader_size); 
+    int fragment_shader_size = sizeof(fragment_shader_source);
+    glShaderSource(gl.fragment_shader, 1, &fragment_shader_source, &fragment_shader_size);
+    
+    int status;
+    char buf[256];
+    size_t len;
+    glCompileShader(gl.vertex_shader);
+    glGetShaderiv(gl.vertex_shader, GL_COMPILE_STATUS, &status);
+    if(status != GL_TRUE) {
+        glGetShaderInfoLog(gl.vertex_shader, sizeof(buf), &len, buf);
+        printf("failed to compile vertex shader\n%s\n", buf);
+        return false;
+    }
+    glCompileShader(gl.fragment_shader);
+    glGetShaderiv(gl.fragment_shader, GL_COMPILE_STATUS, &status);
+    if(status != GL_TRUE) {
+        glGetShaderInfoLog(gl.fragment_shader, sizeof(buf), &len, buf);
+        printf("failed to compile fragment shader\n%s\n", buf);
+        return false;
+    }
+    glAttachShader(gl.program, gl.vertex_shader);
+    glAttachShader(gl.program, gl.fragment_shader);
+    glLinkProgram(gl.program);
+
+    glGetProgramiv(gl.program, GL_LINK_STATUS, &status);
+    if(status != GL_TRUE) {
+        glGetProgramInfoLog(gl.Program, sizeof(buf), &len, buf);
+        printf("failed to link program\n%s\n", buf);
+        return false;
+    }
+
+    gl.a_vertex_location = glGetAttribLocation(gl.program, "a_vertex");
+    if(gl.a_vertex_location == -1) {
+        printf("failed to get attrib location for a_vertex\n");
+        return false;
+    }
+
+    glVertexAttribPointer(gl.a_vertex_location, 2, GL_FLOAT, GL_FALSE, 8, 0);
+
+    gl.t_tex_location = glGetUniformLocation(gl.program, "t_tex");
+    if(gl.t_tex_location == -1) {
+        printf("failed to get sampler location for t_tex\n");
+    }
+    glUniform1i(gl.t_tex_location, 0);
+
+    if(!check_gl_error("program"))
+        return false;
 
     return true;
 }
+
+
 
 bool render(void) {
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    //TODO
     //triangle strip
+    glUseProgram(gl.program);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    if(!check_gl_error("render"))
+        return false;
+
     return true;
+}
+
+void print_pixel(unsigned char *data) {
+    printf("%02x %02x %02x %02x", data[0], data[1], data[2], data[3]);
 }
 
 bool read_pixels(void) {
     unsigned char * data = malloc(gl.w*gl.h*4);
     if(!data) return false;
     glReadPixels(0, 0, gl.w, gl.h, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    printf("%02x %02x %02x %02x", data[0], data[1], data[2], data[3]);
+
+    if(!check_gl_error("readpixels"))
+        return false;
+
+    print_pixel(data[0]);
+    print_pixel(data[(gl.w - 1) * 4]);
+    print_pixel(data[gl.w * (gl.h - 1) * 4]);
+    print_pixel(data[(gl.w - 1 + gl.w * (gl.h - 1)) * 4]);
     free(data);
     return true;
 }
@@ -115,6 +248,14 @@ void close_gl(void) {
         glDeleteTextures(1, &gl.texture);
     if(gl.fbo)
         glDeleteFramebuffers(1, &gl.fbo);
+    if(gl.fb_texture)
+        glDeleteTextures(1, &gl.fb_texture);
+    if(gl.program)
+        glDeleteProgram(gl.program);
+    if(gl.vertex_shader)
+        glDeleteShader(gl.vertex_shader);
+    if(gl.fragment_shader)
+        glDeleteShader(gl.fragment_shader);
 }
 
 void close_egl(void) {
