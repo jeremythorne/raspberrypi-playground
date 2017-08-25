@@ -141,23 +141,21 @@ bool init_gl(void) {
     gl.program = glCreateProgram();
     const char * vertex_shader_source = 
         "attribute vec2 a_vertex;\n"
-        "varying vec2 v_texcoord;\n"
+        "varying highp vec2 v_texcoord;\n"
         "void main(void) {\n"
         "   v_texcoord = a_vertex;\n"
-        "   gl_position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.0f, 1.0f);\n"
+        "   gl_Position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.0f, 1.0f);\n"
         "}\n";
     const char * fragment_shader_source =
         "uniform sampler2D t_tex;\n"
-        "varying vec2 v_texcoord;\n"
+        "varying highp vec2 v_texcoord;\n"
         "void main(void) {\n"
-        "   glFragColor = texture2D(t_tex, v_texcoord);\n"
+        "   gl_FragColor = texture2D(t_tex, v_texcoord);\n"
         "}\n";
     gl.vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     gl.fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    int vertex_shader_size = sizeof(vertex_shader_source);
-    glShaderSource(gl.vertex_shader, 1, (const char **)&vertex_shader_source, &vertex_shader_size); 
-    int fragment_shader_size = sizeof(fragment_shader_source);
-    glShaderSource(gl.fragment_shader, 1, (const char **)&fragment_shader_source, &fragment_shader_size);
+    glShaderSource(gl.vertex_shader, 1, (const char **)&vertex_shader_source, NULL); 
+    glShaderSource(gl.fragment_shader, 1, (const char **)&fragment_shader_source, NULL);
     
     int status;
     char buf[256];
@@ -199,7 +197,7 @@ bool init_gl(void) {
     if(gl.t_tex_location == -1) {
         printf("failed to get sampler location for t_tex\n");
     }
-    glUniform1i(gl.t_tex_location, 0);
+    //glUniform1i(gl.t_tex_location, 0);
 
     if(!check_gl_error("program"))
         return false;
