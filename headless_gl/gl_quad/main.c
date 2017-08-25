@@ -96,7 +96,7 @@ bool init_gl(void) {
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         printf("framebuffer incomplete\n");
         return false;
-
+    }
     //Viewport
     glViewport(0, 0, gl.w, gl.h);
 
@@ -106,7 +106,7 @@ bool init_gl(void) {
     //vertices, vbo
     const float vertices[] = {
         0.0f, 0.0f,
-        0,0f, 1.0f,
+        0.0f, 1.0f,
         1.0f, 1.0f,
         1.0f, 0.0f
     };
@@ -139,29 +139,29 @@ bool init_gl(void) {
 
     //program, shader source, compile, link, check, vertex attrib
     gl.program = glCreateProgram();
-    const char vertex_shader_source = 
-        "attribute vec2 a_vertex;"
-        "varying vec2 v_texcoord;"
-        "void main(void) {"
-        "   v_texcoord = a_vertex;"
-        "   gl_position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.0f, 1.0f);"
-        "}";
-    const char fragment_shader_source =
-        "uniform sampler2D t_tex;"
-        "varying vec2 v_texcoord;"
-        "void main(void) {"
-        "   glFragColor = texture2D(t_tex, v_texcoord);"
-        "}";
+    const char * vertex_shader_source = 
+        "attribute vec2 a_vertex;\n"
+        "varying vec2 v_texcoord;\n"
+        "void main(void) {\n"
+        "   v_texcoord = a_vertex;\n"
+        "   gl_position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.0f, 1.0f);\n"
+        "}\n";
+    const char * fragment_shader_source =
+        "uniform sampler2D t_tex;\n"
+        "varying vec2 v_texcoord;\n"
+        "void main(void) {\n"
+        "   glFragColor = texture2D(t_tex, v_texcoord);\n"
+        "}\n";
     gl.vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     gl.fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     int vertex_shader_size = sizeof(vertex_shader_source);
-    glShaderSource(gl.vertex_shader, 1, &vertex_shader_source, &vertex_shader_size); 
+    glShaderSource(gl.vertex_shader, 1, (const char **)&vertex_shader_source, &vertex_shader_size); 
     int fragment_shader_size = sizeof(fragment_shader_source);
-    glShaderSource(gl.fragment_shader, 1, &fragment_shader_source, &fragment_shader_size);
+    glShaderSource(gl.fragment_shader, 1, (const char **)&fragment_shader_source, &fragment_shader_size);
     
     int status;
     char buf[256];
-    size_t len;
+    GLsizei len;
     glCompileShader(gl.vertex_shader);
     glGetShaderiv(gl.vertex_shader, GL_COMPILE_STATUS, &status);
     if(status != GL_TRUE) {
@@ -182,7 +182,7 @@ bool init_gl(void) {
 
     glGetProgramiv(gl.program, GL_LINK_STATUS, &status);
     if(status != GL_TRUE) {
-        glGetProgramInfoLog(gl.Program, sizeof(buf), &len, buf);
+        glGetProgramInfoLog(gl.program, sizeof(buf), &len, buf);
         printf("failed to link program\n%s\n", buf);
         return false;
     }
@@ -235,10 +235,10 @@ bool read_pixels(void) {
     if(!check_gl_error("readpixels"))
         return false;
 
-    print_pixel(data[0]);
-    print_pixel(data[(gl.w - 1) * 4]);
-    print_pixel(data[gl.w * (gl.h - 1) * 4]);
-    print_pixel(data[(gl.w - 1 + gl.w * (gl.h - 1)) * 4]);
+    print_pixel(&data[0]);
+    print_pixel(&data[(gl.w - 1) * 4]);
+    print_pixel(&data[gl.w * (gl.h - 1) * 4]);
+    print_pixel(&data[(gl.w - 1 + gl.w * (gl.h - 1)) * 4]);
     free(data);
     return true;
 }
