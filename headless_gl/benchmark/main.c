@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -21,9 +22,10 @@ struct egl_s {
 
 
 struct {
-    unsigned int w, h;
+    unsigned int fbo_w, fbo_h;
     unsigned int fbo;
     unsigned int fb_texture;
+    unsigned int tex_w, tex_h;
     unsigned int texture;
     unsigned int vbo;
     unsigned int vertex_shader;
@@ -31,6 +33,7 @@ struct {
     unsigned int program;
     int a_vertex_location;
     int t_tex_location;
+    unsigned int read_w, read_h;
     unsigned char * in_pixels;
     unsigned char * pixels;
 } gl;
@@ -82,16 +85,23 @@ bool check_gl_error(const char * str) {
     return true;
 }
 
-bool init_gl(void) {
+bool init_gl(unsigned int tex_w, unsigned int fbo_w, unsigned int read_w) {
     //Framebuffer
     glGenFramebuffers(1, &gl.fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, gl.fbo);
 
-    gl.w = gl.h = 256;
+    if(read_w > fbo_w) {
+        printf("can't read more than render\n");
+        return false;
+    }
+
+    gl.fbo_w = gl.fbo_h = fbo_w;
+    gl.tex_w = gl.tex_h = tex_w;
+    gl.read_w = gl.read_h = read_w;
 
     glGenTextures(1, &gl.fb_texture);
     glBindTexture(GL_TEXTURE_2D, gl.fb_texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.w, gl.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.fbo_w, gl.fbo_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -103,7 +113,7 @@ bool init_gl(void) {
         return false;
     }
     //Viewport
-    glViewport(0, 0, gl.w, gl.h);
+    glViewport(0, 0, gl.fbo_w, gl.fbo_h);
 
     if(!check_gl_error("framebuffer"))
         return false;
@@ -124,18 +134,18 @@ bool init_gl(void) {
     glGenTextures(1, &gl.texture);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gl.texture);
-    gl.in_pixels = malloc(gl.w*gl.h*4);
+    gl.in_pixels = malloc(gl.tex_w*gl.tex_h*4);
     unsigned char * data = gl.in_pixels;
-    for(int y = 0; y < gl.h; y++) {
-        for(int x = 0; x < gl.w; x++) {
-            int offset = (x + gl.w * y) * 4;
+    for(int y = 0; y < gl.tex_h; y++) {
+        for(int x = 0; x < gl.tex_w; x++) {
+            int offset = (x + gl.tex_w * y) * 4;
             data[offset] =     (x & 0xff);
             data[offset + 1] = (y & 0xff);
             data[offset + 2] =  128;
             data[offset + 3] = 0xff;
         }
     }
-    stbi_write_png("in.png", gl.w, gl.h, 4, gl.in_pixels, gl.w*4);
+    stbi_write_png("in.png", gl.tex_w, gl.tex_h, 4, gl.in_pixels, gl.tex_w*4);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
@@ -212,14 +222,14 @@ bool init_gl(void) {
     if(!check_gl_error("program"))
         return false;
     
-    gl.pixels = malloc(gl.w*gl.h*4);
+    gl.pixels = malloc(gl.read_w*gl.read_h*4);
 
     return true;
 }
 
 bool upload(void) {
     if(!gl.in_pixels) return false;
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.w, gl.h, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.tex_w, gl.tex_h, 0, GL_RGBA,
             GL_UNSIGNED_BYTE, gl.in_pixels);
     if(!check_gl_error("upload"))
         return false;
@@ -246,7 +256,7 @@ void print_pixel(unsigned char *data) {
 
 bool read_pixels(void) {
     if(!gl.pixels) return false;
-    glReadPixels(0, 0, gl.w, gl.h, GL_RGBA, GL_UNSIGNED_BYTE, gl.pixels);
+    glReadPixels(0, 0, gl.read_w, gl.read_h, GL_RGBA, GL_UNSIGNED_BYTE, gl.pixels);
 
     if(!check_gl_error("readpixels"))
         return false;
@@ -255,7 +265,7 @@ bool read_pixels(void) {
 }
 
 bool save() {
-    stbi_write_png("out.png", gl.w, gl.h, 4, gl.pixels, gl.w*4);
+    stbi_write_png("out.png", gl.read_w, gl.read_h, 4, gl.pixels, gl.read_w*4);
     return true;
 }
 
@@ -276,6 +286,7 @@ void close_gl(void) {
         glDeleteShader(gl.vertex_shader);
     if(gl.fragment_shader)
         glDeleteShader(gl.fragment_shader);
+    memset(&gl, 0, sizeof(gl));
 }
 
 void close_egl(void) {
@@ -289,14 +300,79 @@ void close_egl(void) {
         close(egl.fd); 
 }
 
+void print_elapsed(struct timeval *t1, struct timeval *t2){
+    // compute and print the elapsed time in millisec
+    double elapsed_time;
+    elapsed_time = (t2->tv_sec - t1->tv_sec) * 1000.0;      // sec to ms
+    elapsed_time += (t2->tv_usec - t1->tv_usec) / 1000.0;   // us to ms}
+    printf("elapsed %f ms\n", elapsed_time);
+}
+
 int main(void) {
     if(!init_egl()) goto end;
-    if(!init_gl()) goto end;
+
+    struct timeval t1, t2;
+
+    printf("mnmimal upload, render, read\n");
+    if(!init_gl(4, 4, 4)) goto end;
+    gettimeofday(&t1, NULL);
     for(int i = 0; i < 10000; i++) {
         if(!upload()) goto end;
         if(!render()) goto end;
         if(!read_pixels()) goto end;
     }
+    gettimeofday(&t2, NULL);
+    close_gl();
+    print_elapsed(&t1, &t2);
+
+    printf("minimal upload, read, full render\n");
+    if(!init_gl(4, 256, 4)) goto end;
+    gettimeofday(&t1, NULL);
+    for(int i = 0; i < 10000; i++) {
+        if(!upload()) goto end;
+        if(!render()) goto end;
+        if(!read_pixels()) goto end;
+    }
+    gettimeofday(&t2, NULL);
+    close_gl();
+    print_elapsed(&t1, &t2);
+
+    printf("minimal render, read, full upload\n");
+    if(!init_gl(256, 4, 4)) goto end;
+    gettimeofday(&t1, NULL);
+    for(int i = 0; i < 10000; i++) {
+        if(!upload()) goto end;
+        if(!render()) goto end;
+        if(!read_pixels()) goto end;
+    }
+    gettimeofday(&t2, NULL);
+    close_gl();
+    print_elapsed(&t1, &t2);
+
+    printf("minimal upload, full render, read\n");
+    if(!init_gl(4, 256, 256)) goto end;
+    gettimeofday(&t1, NULL);
+    for(int i = 0; i < 10000; i++) {
+        if(!upload()) goto end;
+        if(!render()) goto end;
+        if(!read_pixels()) goto end;
+    }
+    gettimeofday(&t2, NULL);
+    close_gl();
+    print_elapsed(&t1, &t2);
+    
+    printf("full upload, render, read\n");
+    if(!init_gl(4, 256, 256)) goto end;
+    gettimeofday(&t1, NULL);
+    for(int i = 0; i < 10000; i++) {
+        if(!upload()) goto end;
+        if(!render()) goto end;
+        if(!read_pixels()) goto end;
+    }
+    gettimeofday(&t2, NULL);
+    close_gl();
+    print_elapsed(&t1, &t2);
+
     save();
 end:
     close_gl();
