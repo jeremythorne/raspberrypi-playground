@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 struct egl_s {
     int fd;
     struct gbm_device * gbm;
@@ -107,8 +110,8 @@ bool init_gl(void) {
     const float vertices[] = {
         0.0f, 0.0f,
         0.0f, 1.0f,
-        1.0f, 1.0f,
-        1.0f, 0.0f
+        1.0f, 0.0f,
+        1.0f, 1.0f
     };
     glGenBuffers(1, &gl.vbo);
     glBindBuffer(GL_ARRAY_BUFFER, gl.vbo);
@@ -122,15 +125,19 @@ bool init_gl(void) {
     unsigned char * data = malloc(gl.w*gl.h*4);
     for(int y = 0; y < gl.h; y++) {
         for(int x = 0; x < gl.w; x++) {
-            data[x * 4 + y * gl.w * 4] =
-                (x & 0xff)      |
-                (y & 0xff) << 8 |
-                128      << 16  |
-                0xff     << 24;
+            int offset = (x + gl.w * y) * 4;
+            data[offset] =     (x & 0xff);
+            data[offset + 1] = (y & 0xff);
+            data[offset + 2] =  128;
+            data[offset + 3] = 0xff;
         }
     }
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, gl.w, gl.h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    stbi_write_png("in.png", gl.w, gl.h, 4, data, gl.w*4);
     free(data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     
@@ -144,13 +151,14 @@ bool init_gl(void) {
         "varying highp vec2 v_texcoord;\n"
         "void main(void) {\n"
         "   v_texcoord = a_vertex;\n"
-        "   gl_Position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.0f, 1.0f);\n"
+        "   gl_Position = vec4(a_vertex * 2.0f - vec2(1.0f, 1.0f), 0.5f, 1.0f);\n"
         "}\n";
     const char * fragment_shader_source =
         "uniform sampler2D t_tex;\n"
         "varying highp vec2 v_texcoord;\n"
         "void main(void) {\n"
         "   gl_FragColor = texture2D(t_tex, v_texcoord);\n"
+        //"   gl_FragColor = vec4(v_texcoord, 0.25f, 1.0f);\n"
         "}\n";
     gl.vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     gl.fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -192,12 +200,13 @@ bool init_gl(void) {
     }
 
     glVertexAttribPointer(gl.a_vertex_location, 2, GL_FLOAT, GL_FALSE, 8, 0);
-
+    glEnableVertexAttribArray(gl.a_vertex_location);
     gl.t_tex_location = glGetUniformLocation(gl.program, "t_tex");
     if(gl.t_tex_location == -1) {
         printf("failed to get sampler location for t_tex\n");
     }
-    //glUniform1i(gl.t_tex_location, 0);
+    glUseProgram(gl.program);
+    glUniform1i(gl.t_tex_location, 0);
 
     if(!check_gl_error("program"))
         return false;
@@ -237,6 +246,8 @@ bool read_pixels(void) {
     print_pixel(&data[(gl.w - 1) * 4]);
     print_pixel(&data[gl.w * (gl.h - 1) * 4]);
     print_pixel(&data[(gl.w - 1 + gl.w * (gl.h - 1)) * 4]);
+
+    stbi_write_png("out.png", gl.w, gl.h, 4, data, gl.w*4);
     free(data);
     return true;
 }
