@@ -95,8 +95,12 @@ class Weather:
         mini_font = ImageFont.truetype(FredokaOne, 16)
         W, H = 212, 104
         white = (255, 255, 255)
+        red = (255, 0, 0)
         img = Image.new("RGB", (W, H))
         draw = ImageDraw.Draw(img)
+        draw.arc(
+                [W * 0.8, H/2 - W/2, W * 0.8 + W, H/2 + W/2],
+                0, 360, fill=red)
         draw.text((10, 10), self.date_txt, font=font, fill=white)
         draw.text((10, 40), self.weather, font=font, fill=white)
         temp_str = "{}C".format(self.temp)
