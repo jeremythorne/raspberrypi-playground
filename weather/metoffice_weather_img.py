@@ -26,6 +26,9 @@ class Weather:
         r = requests.get(url)
         if r.status_code != 200:
             print("error {}: {}".format(r.status_code, r.text))
+            self.error = True
+            return
+        self.error = False
         j = r.json()
 
         weather_types = {
@@ -79,7 +82,10 @@ class Weather:
         self.min_temp = str(min_temp)
         W = now['Rep'][0]['W']
         self.weather = weather_types[W][0]
-        self.date_txt = now['value'][:-1]
+        t = j['SiteRep']['DV']['dataDate']
+        date, time = t.split("T")
+        time = time[:-1]
+        self.date_txt = "{} {}".format(date, time)
         print("""the weather forecast for {} ({})
         is {}, temp {} ({}/{}) C""".format(
             self.city,
@@ -91,6 +97,7 @@ class Weather:
 
     def draw(self, filename):
         """render weather to image"""
+        big_font = ImageFont.truetype(FredokaOne, 30)
         font = ImageFont.truetype(FredokaOne, 20)
         mini_font = ImageFont.truetype(FredokaOne, 16)
         W, H = 212, 104
@@ -101,15 +108,25 @@ class Weather:
         draw.arc(
                 [W * 0.8, H/2 - W/2, W * 0.8 + W, H/2 + W/2],
                 0, 360, fill=red)
-        draw.text((10, 10), self.date_txt, font=font, fill=white)
-        draw.text((10, 40), self.weather, font=font, fill=white)
-        temp_str = "{}C".format(self.temp)
-        draw.text((10, 70), temp_str, font=font, fill=white)
-        w, h = font.getsize(temp_str)
+        if self.error:
+            draw.text((10, 10), "couldn't get forecast")
+            img.save(filename)
+            return
+        offy = 10
+        draw.text((10, offy), self.date_txt, font=mini_font, fill=white)
+        w, h = mini_font.getsize(self.date_txt)
+        offy += h + 5
+        draw.text((10, offy), self.weather, font=font, fill=white)
+        w, h = font.getsize(self.weather)
+        offy += h + 5
+        temp_str = "{}°".format(self.temp)
+        draw.text((10, offy), temp_str, font=big_font, fill=white)
+        w, h = big_font.getsize(temp_str)
         mxw, mxh = mini_font.getsize(self.max_temp)
         mnw, mnh = mini_font.getsize(self.min_temp)
-        draw.text((10 + w + 10, 70), self.max_temp, font=mini_font, fill=white)
-        draw.text((10 + w + 10 + mxw + 5, 70 + h - mnh),
+        draw.text((10 + w + 10, offy - 2), self.max_temp,
+                  font=mini_font, fill=white)
+        draw.text((10 + w + 10 + mxw / 2 - mnw / 2, offy + h - mnh + 3),
                   self.min_temp, font=mini_font, fill=white)
         img.save(filename)
 
