@@ -3,6 +3,7 @@
 from font_fredoka_one import FredokaOne
 from PIL import ImageFont, Image, ImageDraw
 import requests
+import sys
 
 """Fetch and render weather to image"""
 
@@ -132,9 +133,14 @@ class Weather:
 
 
 def main():
+    output_image = sys.argv[1] if len(sys.argv) > 1 else "weather.png"
     weather = Weather()
-    weather.fetch()
-    weather.draw("weather.png")
+    try:
+        weather.fetch()
+    except Exception as e:
+        print("Exceptiion:{}".format(e))
+        weather.error = True
+    weather.draw(output_image)
 
 
 if __name__ == "__main__":
