@@ -70,14 +70,14 @@ class Weather:
         loc = j['SiteRep']['DV']['Location']
         self.city = loc['name']
         now = loc['Period'][0]
-        self.temp = now['Rep'][0]['F']  # F = Feels like
+        self.temp = now['Rep'][0]['T']  # F = Feels like
 
         min_temp = int(self.temp)
         max_temp = min_temp
         for rep in now['Rep']:
-            F = int(rep['F'])
-            max_temp = F if F > max_temp else max_temp
-            min_temp = F if F < min_temp else min_temp
+            T = int(rep['T'])
+            max_temp = T if T > max_temp else max_temp
+            min_temp = T if T < min_temp else min_temp
 
         self.max_temp = str(max_temp)
         self.min_temp = str(min_temp)
