@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from font_fredoka_one import FredokaOne
+from inky import InkyPHAT
 from PIL import ImageFont, Image, ImageDraw
 import requests
 import sys
@@ -96,22 +97,21 @@ class Weather:
             self.min_temp,
             self.max_temp))
 
-    def draw(self, filename):
-        """render weather to image"""
+    def _draw(self, img, props):
         big_font = ImageFont.truetype(FredokaOne, 30)
         font = ImageFont.truetype(FredokaOne, 20)
         mini_font = ImageFont.truetype(FredokaOne, 16)
-        W, H = 212, 104
-        white = (255, 255, 255)
-        red = (255, 0, 0)
-        img = Image.new("RGB", (W, H))
+        W, H = props.WIDTH, props.HEIGHT
+        black = props.BLACK
+        white = props.WHITE
+        red = props.RED
         draw = ImageDraw.Draw(img)
+        draw.rectangle([(0,0), (W, H)], black)
         draw.arc(
                 [W * 0.8, H/2 - W/2, W * 0.8 + W, H/2 + W/2],
                 0, 360, fill=red)
         if self.error:
             draw.text((10, 10), "couldn't get forecast")
-            img.save(filename)
             return
         offy = 10
         draw.text((10, offy), self.date_txt, font=mini_font, fill=white)
@@ -129,6 +129,25 @@ class Weather:
                   font=mini_font, fill=white)
         draw.text((10 + w + 10 + mxw / 2 - mnw / 2, offy + h - mnh + 3),
                   self.min_temp, font=mini_font, fill=white)
+
+    def draw_inky(self):
+        inky_display = InkyPHAT("red")
+        img = Image.new("P", (inky_display.WIDTH, inky_display.HEIGHT))
+        self._draw(img, inky_display)
+        inky_display.set_image(img)
+        inky_display.show()
+
+    def draw(self, filename):
+        """render weather to image"""
+        class Props:
+            WIDTH = 212
+            HEIGHT = 104
+            BLACK = (0, 0, 0)
+            WHITE = (255, 255, 255)
+            RED = (255, 0, 0)
+        props = Props()
+        img = Image.new("RGB", (props.WIDTH, props.HEIGHT))
+        self._draw(img, props)
         img.save(filename)
 
 
@@ -140,7 +159,10 @@ def main():
     except Exception as e:
         print("Exceptiion:{}".format(e))
         weather.error = True
-    weather.draw(output_image)
+    if output_image == "inky":
+        weather.draw_inky()
+    else:
+        weather.draw(output_image)
 
 
 if __name__ == "__main__":
