@@ -1,10 +1,16 @@
 #!/usr/bin/python3
 
 from font_fredoka_one import FredokaOne
-from inky import InkyPHAT
 from PIL import ImageFont, Image, ImageDraw
 import requests
 import sys
+inky_available = False
+
+try:
+    from inky import InkyPHAT
+    inky_available = True
+except ImportError:
+    print("can't import InkyPHAT")
 
 """Fetch and render weather to image"""
 
@@ -106,7 +112,7 @@ class Weather:
         white = props.WHITE
         red = props.RED
         draw = ImageDraw.Draw(img)
-        draw.rectangle([(0,0), (W, H)], black)
+        draw.rectangle([(0, 0), (W, H)], black)
         draw.arc(
                 [W * 0.8, H/2 - W/2, W * 0.8 + W, H/2 + W/2],
                 0, 360, fill=red)
@@ -159,7 +165,7 @@ def main():
     except Exception as e:
         print("Exceptiion:{}".format(e))
         weather.error = True
-    if output_image == "inky":
+    if output_image == "inky" and inky_available:
         weather.draw_inky()
     else:
         weather.draw(output_image)
