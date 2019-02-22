@@ -41,7 +41,7 @@ class Weather:
         j = r.json()
 
         weather_types = {
-                "NA":("Not available", "", ""),
+                "NA": ("Not available", "", ""),
                 "0": ("Clear", "night", "sunny"),
                 "1": ("Sunny", "day", "sunny"),
                 "2": ("Partly cloudy", "night", "cloudy"),
