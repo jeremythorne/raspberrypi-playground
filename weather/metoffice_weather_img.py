@@ -80,12 +80,10 @@ class Weather:
         now = loc['Period'][0]
         self.temp = now['Rep'][0]['T']  # F = Feels like
 
-        min_temp = int(self.temp)
-        max_temp = min_temp
-        for rep in now['Rep']:
-            T = int(rep['T'])
-            max_temp = T if T > max_temp else max_temp
-            min_temp = T if T < min_temp else min_temp
+        todays_temps = [int(rep['T']) for rep in now['Rep']]
+        tomorrows_temps = [int(rep['T']) for rep in loc['Period'][1]['Rep']]
+        max_temp = max(todays_temps)
+        min_temp = min(todays_temps + tomorrows_temps[0:3])
 
         self.max_temp = str(max_temp)
         self.min_temp = str(min_temp)
