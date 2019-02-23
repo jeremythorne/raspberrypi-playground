@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import datetime
 from font_fredoka_one import FredokaOne
 from PIL import ImageFont, Image, ImageDraw
 import os.path
@@ -77,17 +78,23 @@ class Weather:
 
         loc = j['SiteRep']['DV']['Location']
         self.city = loc['name']
-        now = loc['Period'][0]
-        self.temp = now['Rep'][0]['T']  # F = Feels like
 
-        todays_temps = [int(rep['T']) for rep in now['Rep']]
+        today = loc['Period'][0]['Rep']
+        # in a full day there are 8 'Rep's but the API truncates
+        # todays Reps to throw away entries early in the day
+        index = max(len(today) - (8 - datetime.datetime.now().hour // 3 ) , 0)
+        now = today[index]
+        self.temp = now['T']  # F = Feels like
+
+        todays_temps = [int(rep['T']) for rep in today[index:]]
         tomorrows_temps = [int(rep['T']) for rep in loc['Period'][1]['Rep']]
         max_temp = max(todays_temps)
+        # include tomorrow morning in finding minimum temperature
         min_temp = min(todays_temps + tomorrows_temps[0:3])
 
         self.max_temp = str(max_temp)
         self.min_temp = str(min_temp)
-        W = now['Rep'][0]['W']
+        W = now['W']
         self.weather = weather_types[W][0]
         self.icon = weather_types[W][2]
         t = j['SiteRep']['DV']['dataDate']
