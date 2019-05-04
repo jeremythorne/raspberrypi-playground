@@ -80,11 +80,25 @@ class Weather:
         self.city = loc['name']
 
         today = loc['Period'][0]['Rep']
-        # in a full day there are 8 'Rep's but the API truncates
-        # todays Reps to throw away entries early in the day
-        index = max(len(today) - (8 - datetime.datetime.now().hour // 3 ) , 0)
+
+        utcnow = datetime.datetime.utcnow()
+        utc_minutes = utcnow.hour * 60 + utcnow.minute
+        all_minutes = [int(rep['$']) for rep in today]
+        minutes = [m for m in all_minutes if m <= utc_minutes]
+        index = len(minutes) - 1
+        print("minutes from UTC {} best forecast minutes {} index {}".format(
+                utc_minutes, minutes[index], index))
         now = today[index]
-        self.temp = now['T']  # F = Feels like
+        if index + 1 < len(today):
+            T = [int(now['T']), int(today[index + 1]['T'])]
+            m = all_minutes[index:index + 2]
+            a = (utc_minutes - m[0]) / (m[1] - m[0])
+            self.temp = str(int(round(T[0] + a * (T[1] - T[0]))))
+            print("interp temp")
+            print("a = {:0.02f}, T[0] = {} T[1] = {}, T = {}".format(
+                a, T[0], T[1], self.temp))
+        else:
+            self.temp = now['T']  # F = Feels like
 
         todays_temps = [int(rep['T']) for rep in today[index:]]
         tomorrows_temps = [int(rep['T']) for rep in loc['Period'][1]['Rep']]
@@ -175,7 +189,7 @@ def main():
     try:
         weather.fetch()
     except Exception as e:
-        print("Exceptiion:{}".format(e))
+        print("Exception:{}".format(e))
         weather.error = True
     if output_image == "inky" and inky_available:
         weather.draw_inky()
