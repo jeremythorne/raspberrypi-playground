@@ -23,8 +23,8 @@ class Weather:
     def __init__(self):
 
         self.app_id = open("/home/pi/metofficekey.txt").read().strip()
-
-        self.location = "350107"  # Anglesey Abbey
+        self.location = "353014"  # Pewsey
+        #self.location = "350107"  # Anglesey Abbey
         self.url_base = "http://datapoint.metoffice.gov.uk/" +\
                         "public/data/val/wxfcs/all/json/"
 
