@@ -1,26 +1,31 @@
 #!/bin/bash
 
 boot=$1
+no_inky=$2
+
+function inky_str {
+    echo $1
+    if [ "$no_inky" != "no_inky" ]; then
+        ./inky_str $1
+    fi
+}
 
 function do_boot {
     # loop checking for WiFi and exit if connected or after a minute
     # write status to console and inky phat display
-    echo "hello..."
-    ./inky_str.py "hello..."
+    inky_str "hello..."
 
     for i in 1 2 3 4 5 6; do
-        sleep 10
-        wifi=$(iwconfig 2>&1 | grep -oP '(?<=ESSID:).*')
+        /bin/sleep 10
+        wifi=$(/sbin/iwconfig 2>&1 | /bin/grep -oP '(?<=ESSID:).*')
         if [ ! -z "$wifi" ]; then
-            echo "connected to $wifi"
-            ./inky_str.py "WiFi: $wifi"
+            inky_str "WiFi: $wifi"
             exit 0
         else
-            echo "no WiFi"
-            ./inky_str.py "connecting..."
+            inky_str "connecting..."
         fi
     done
-    ./inky_str.py "No WiFi"
+    inky_str "No WiFi"
     exit 1
 }
 
@@ -31,8 +36,8 @@ function do_weather {
 
 LOCKDIR=/tmp/launcher_lock
 
-if mkdir $LOCKDIR; then
-    trap "rm -r $LOCKDIR" EXIT
+if /bin/mkdir $LOCKDIR; then
+    trap "/bin/rm -r $LOCKDIR" EXIT
     if [ "$boot" = "boot" ]; then
         do_boot
     else
