@@ -20,7 +20,7 @@ function do_boot {
         wifi=$(/sbin/iwconfig 2>&1 | /bin/grep -oP '(?<=ESSID:).*')
         if [ ! -z "$wifi" ]; then
             inky_str "WiFi: $wifi"
-            exit 0
+            return 0
         else
             inky_str "connecting..."
         fi
@@ -31,7 +31,11 @@ function do_boot {
 
 function do_weather {
     # fetch weather from met office and display on inky phat
-    ./metoffice_weather_img.py inky
+    inky="inky"
+    if [ "$no_inky" = "no_inky" ]; then
+        inky=""
+    fi
+    ./metoffice_weather_img.py $inky
 }
 
 LOCKDIR=/tmp/launcher_lock
@@ -40,7 +44,6 @@ if /bin/mkdir $LOCKDIR; then
     trap "/bin/rm -r $LOCKDIR" EXIT
     if [ "$boot" = "boot" ]; then
         do_boot
-    else
-        do_weather
     fi
+    do_weather
 fi
