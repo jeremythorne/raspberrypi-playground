@@ -6,7 +6,7 @@ no_inky=$2
 function inky_str {
     echo $1
     if [ "$no_inky" != "no_inky" ]; then
-        ./inky_str $1
+        ./inky_str.py "$1"
     fi
 }
 
