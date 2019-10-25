@@ -20,7 +20,6 @@ class InkyString:
         W, H = props.WIDTH, props.HEIGHT
         black = props.BLACK
         white = props.WHITE
-        red = props.RED
         draw = ImageDraw.Draw(img)
         draw.rectangle([(0, 0), (W, H)], white)
         w, h = font.getsize(text)
@@ -28,7 +27,7 @@ class InkyString:
         draw.text((10, offy), text, font=font, fill=black)
 
     def draw_inky(self, text):
-        inky_display = InkyPHAT("red")
+        inky_display = InkyPHAT("black")
         img = Image.new("P", (inky_display.WIDTH, inky_display.HEIGHT))
         self._draw(img, inky_display, text)
         inky_display.set_image(img)
