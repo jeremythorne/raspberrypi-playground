@@ -81,25 +81,35 @@ func main()
     glBufferData(GLenum(GL_ARRAY_BUFFER), GLsizeiptr(MemoryLayout<GLfloat>.size * Int(vertices.count)),
                                            vertices, GLenum(GL_STATIC_DRAW))
 
-    let vertex_shader = glCreateShader(GLenum(GL_VERTEX_SHADER))
-    vertex_shader_text.withCString {cs in
-        var cs_copy = cs
-        //TODO more mangling required on the char **
-        //glShaderSource(_shader, 1, &cs_copy, nil)
+    func compileShader(text:String, shader_type:GLenum) -> GLuint {
+        let shader = glCreateShader(shader_type)
+        text.withCString {cs in
+            var cs_opt = Optional(cs)
+            glShaderSource(shader, 1, &cs_opt, nil)
+        }
+        glCompileShader(shader)
+        var compile_status:GLint = 0
+        glGetShaderiv(shader, GLenum(GL_COMPILE_STATUS), &compile_status)
+        if compile_status != GLboolean(GL_TRUE) {
+            print("shader compile failed")
+            return 0
+        }
+        return shader
     }
-    glCompileShader(vertex_shader)
 
-    let fragment_shader = glCreateShader(GLenum(GL_VERTEX_SHADER))
-    fragment_shader_text.withCString {cs in
-        var cs_copy = cs
-        //glShaderSource(fragment_shader, 1, &cs_copy, nil)
-    }
-    glCompileShader(fragment_shader)
+    let vertex_shader = compileShader(text: vertex_shader_text, shader_type:GLenum(GL_VERTEX_SHADER))
+
+    let fragment_shader = compileShader(text: fragment_shader_text, shader_type:GLenum(GL_FRAGMENT_SHADER))
 
     let program = glCreateProgram()
     glAttachShader(program, vertex_shader)
     glAttachShader(program, fragment_shader)
     glLinkProgram(program)
+    var link_status:GLint = 0
+    glGetProgramiv(program, GLenum(GL_LINK_STATUS), &link_status)
+    if link_status == GLboolean(GL_TRUE) {
+        print("linked")
+    }
 
     let pos_location:GLuint = GLuint(glGetAttribLocation(program, "pos"))
     let col_location:GLuint = GLuint(glGetAttribLocation(program, "col"))
@@ -111,12 +121,14 @@ func main()
     glEnableVertexAttribArray(col_location)
     glVertexAttribPointer(col_location, 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
                             GLsizei(MemoryLayout<GLfloat>.size),
-                                       UnsafeRawPointer(bitPattern: 2))
+                                       UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 2))
     var width: Int32 = 0
     var height: Int32 = 0
     glfwGetFramebufferSize(window, &width, &height)
     glViewport(0, 0, width, height)
     glClearColor(1.0, 1.0, 0.0, 1.0)
+
+    print("starting loop")
 
     while glfwWindowShouldClose(window) == 0 {
         glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
