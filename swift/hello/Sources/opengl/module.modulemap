@@ -1,10 +1,14 @@
+
 module GL [system] {
+    header "macros.h"
     header "/usr/include/GL/gl.h"
+    header "/usr/include/GL/glext.h"
     link "GL"
     export *
 }
 
 module GLFW [system] {
+    header "macros.h"
     header "/usr/include/GLFW/glfw3.h"
     link "glfw"
     export *
