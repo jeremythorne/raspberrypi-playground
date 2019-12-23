@@ -25,29 +25,34 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var vertices: [GLfloat] = [
-     0.0,  1.0, 0.0, 1.0, 0.0,
-     0.0,  0.0, 1.0, 0.0, 0.0,
-     1.0,  1.0, 0.0, 0.0, 1.0,
-     1.0,  0.0, 0.0, 0.0, 1.0,
+     0.0, 1.0,  1.0, 0.0, 0.0,  0.0, 1.0, 
+     0.0, 0.0,  1.0, 0.0, 0.0,  0.0, 0.0, 
+     1.0, 1.0,  1.0, 0.0, 0.0,  1.0, 1.0, 
+     1.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 
 ]
 
 var vertex_shader_text = "#version 110\n"
 + "attribute vec3 col;\n"
 + "attribute vec2 pos;\n"
++ "attribute vec2 tex_coord;\n"
 + "uniform vec2 scale;\n"
 + "uniform vec2 offset;\n"
-+ "varying vec3 color;\n"
++ "varying vec3 vcolor;\n"
++ "varying vec2 vtex_coord;\n"
 + "void main()\n"
 + "{\n"
 + "  gl_Position = vec4(pos * scale + offset, 0.0, 1.0);\n"
-+ "  color = col;\n"
++ "  vcolor = col;\n"
++ "  vtex_coord = tex_coord;\n"
 + "}\n"
 
 var fragment_shader_text = "#version 110\n"
-+ "varying vec3 color;\n"
++ "varying vec3 vcolor;\n"
++ "varying vec2 vtex_coord;\n"
++ "uniform sampler2D image;\n"
 + "void main()\n"
 + "{\n"
-+ "  gl_FragColor = vec4(color, 1.0);\n"
++ "  gl_FragColor = vec4(vcolor, 1.0) * texture2D(image, vtex_coord);\n"
 + "}\n"
 
 class Game {
@@ -68,6 +73,7 @@ class App {
     var program:GLuint = 0
     var scale_location:GLint = 0 
     var offset_location:GLint = 0
+    var texture:GLuint = 0
 
     func run(game:Game)
     {
@@ -109,6 +115,29 @@ class App {
         glBufferData(GLenum(GL_ARRAY_BUFFER), GLsizeiptr(MemoryLayout<GLfloat>.size * Int(vertices.count)),
                                                vertices, GLenum(GL_STATIC_DRAW))
 
+        func loadTexture() -> GLuint {
+            var texture:GLuint = 0
+            glGenTextures(1, &texture)
+            glBindTexture(GLenum(GL_TEXTURE_2D), texture)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_S), GL_REPEAT)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_T), GL_REPEAT)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MIN_FILTER), GL_NEAREST)
+            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MAG_FILTER), GL_NEAREST)
+
+            var bytes: [UInt8] = [
+                   0, 0, 0, 0xff,  0xff, 0xff, 0xff, 0xff,
+                0xff, 0, 0, 0xff,     0, 0xff,    0, 0xff
+            ]
+            glTexImage2D(GLenum(GL_TEXTURE_2D), 0, GL_RGBA,
+                         2, 2, 0, GLenum(GL_RGBA), GLenum(GL_UNSIGNED_BYTE),
+                         &bytes)
+            glBindTexture(GLenum(GL_TEXTURE_2D), 0)
+            return texture
+        }
+
+        self.texture = loadTexture()
+        print ("texture", self.texture)
+
         func compileShader(text:String, shader_type:GLenum) -> GLuint {
             let shader = glCreateShader(shader_type)
             text.withCString {cs in
@@ -120,6 +149,11 @@ class App {
             glGetShaderiv(shader, GLenum(GL_COMPILE_STATUS), &compile_status)
             if compile_status != GLboolean(GL_TRUE) {
                 print("shader compile failed")
+                var buffer = [Int8]()
+                buffer.reserveCapacity(256)
+                var length: GLsizei = 0
+                glGetShaderInfoLog(shader, 256, &length, &buffer)
+                print(String(cString: buffer))
                 return 0
             }
             return shader
@@ -139,19 +173,27 @@ class App {
             print("linked")
         }
 
-        let pos_location = GLuint(glGetAttribLocation(self.program, "pos"))
-        let col_location = GLuint(glGetAttribLocation(self.program, "col"))
+        let pos_location = GLint(glGetAttribLocation(self.program, "pos"))
+        let col_location = GLint(glGetAttribLocation(self.program, "col"))
+        let tex_coord_location = GLint(glGetAttribLocation(self.program, "tex_coord"))
         self.scale_location = GLint(glGetUniformLocation(self.program, "scale")) 
         self.offset_location = GLint(glGetUniformLocation(self.program, "offset")) 
 
-        glEnableVertexAttribArray(pos_location)
-        glVertexAttribPointer(pos_location, 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 5,
+        print("program attribute locations", pos_location, col_location, tex_coord_location)
+
+        glEnableVertexAttribArray(GLuint(pos_location))
+        glVertexAttribPointer(GLuint(pos_location), 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLfloat>.size) * 7,
                                            UnsafeRawPointer(bitPattern: 0))
-        glEnableVertexAttribArray(col_location)
-        glVertexAttribPointer(col_location, 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 5,
+        glEnableVertexAttribArray(GLuint(col_location))
+        glVertexAttribPointer(GLuint(col_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLfloat>.size) * 7,
                                            UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 2))
+        glEnableVertexAttribArray(GLuint(tex_coord_location))
+        glVertexAttribPointer(GLuint(tex_coord_location), 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLfloat>.size) * 7,
+                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 5))
+        
         var iwidth: Int32 = 0
         var iheight: Int32 = 0
         glfwGetFramebufferSize(window, &iwidth, &iheight)
@@ -159,6 +201,8 @@ class App {
         self.width = Float(iwidth)
         self.height = Float(iheight)
         glClearColor(1.0, 1.0, 0.0, 1.0)
+
+        print("GL error:", glGetError())
 
         game.setup()
 
@@ -192,7 +236,9 @@ class App {
         glUseProgram(self.program)
         glUniform2fv(self.scale_location, 1, &scale)
         glUniform2fv(self.offset_location, 1, &offset)
+        glBindTexture(GLenum(GL_TEXTURE_2D), self.texture)
         glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
+        glBindTexture(GLenum(GL_TEXTURE_2D), 0)
     }
 
 }
