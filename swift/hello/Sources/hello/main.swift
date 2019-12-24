@@ -1,40 +1,71 @@
 let app = App()
 
-var gx:Float = 0.0
-var gy:Float = 0.0
-var vx:Float = 3.0
-var vy:Float = 2.0
-let hs:Float = 50.0
+var image = Image()
+
+class Ball {
+    var gx:Float = 0.0
+    var gy:Float = 0.0
+    var vx:Float = Float.random(in: -3.0...3.0)
+    var vy:Float = Float.random(in: -3.0...3.0)
+    var hx:Float = 0.0
+    var hy:Float = 0.0
+
+    func setup() {
+        self.gx = app.width / 2.0
+        self.gy = app.height / 2.0
+        self.hx = Float(image.width) / 2.0
+        self.hy = Float(image.height) / 2.0
+    }
+
+    func update() {
+        self.gx += self.vx
+        self.gy += self.vy
+        if self.gx > app.width - self.hx {
+            self.gx = app.width - self.hx
+            self.vx = -self.vx
+        } else if self.gx < self.hx {
+            self.gx = self.hx
+            self.vx = -self.vx
+        }
+
+        if self.gy > app.height - self.hy {
+            self.gy = app.height - self.hy
+            self.vy = -self.vy
+        } else if self.gy < self.hy {
+            self.gy = self.hy
+            self.vy = -self.vy
+        }
+    }
+
+    func draw() {
+        app.drawImageCentered(x:self.gx, y:self.gy, image:image)
+    }
+}
+
+var balls = [Ball]()
+for _ in 1...10 {
+    balls.append(Ball())
+}
 
 class MyGame : Game {
 
     override func setup() {
-        gx = app.width / 2.0
-        gy = app.height / 2.0
+        image = app.loadImage(filename:"images/hello.png")!
+        for ball in balls {
+            ball.setup()
+        }
     }
 
     override func update() {
-        gx += vx
-        gy += vy
-        if gx > app.width - hs {
-            gx = app.width - hs
-            vx = -vx
-        } else if gx < hs {
-            gx = hs
-            vx = -vx
-        }
-
-        if gy > app.height - hs {
-            gy = app.height - hs
-            vy = -vy
-        } else if gy < hs {
-            gy = hs
-            vy = -vy
+        for ball in balls {
+            ball.update()
         }
     }
 
     override func draw() {
-        app.drawRectCentered(x:gx, y:gy, w: 2.0 * hs, h: 2.0 * hs)
+        for ball in balls {
+            ball.draw()
+        }
     }
 }
 

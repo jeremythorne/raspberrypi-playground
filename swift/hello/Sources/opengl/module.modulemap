@@ -13,3 +13,10 @@ module GLFW [system] {
     link "glfw"
     export *
 }
+
+module LIBPNG [system] {
+    header "macros.h"
+    header "/usr/include/libpng16/png.h"
+    link "png16"
+    export *
+}

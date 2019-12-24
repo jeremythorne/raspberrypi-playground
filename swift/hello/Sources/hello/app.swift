@@ -3,9 +3,11 @@
 // www.glfw.org - cross platform GL window toolkit
 // github.com/sakrist/Swift_OpenGL_Example - iOS, Linux, Android OpenGL is Swift 
 // pygame-zero.readthedocs.io - simple python game framework
+// gist.github.com/niw/5963798 - libpng code
 
 import GL
 import GLFW
+import LIBPNG
 
 func error_callback(error: Int32, description: Optional<UnsafePointer<Int8>>)
 {
@@ -25,10 +27,10 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var vertices: [GLfloat] = [
-     0.0, 1.0,  1.0, 0.0, 0.0,  0.0, 1.0, 
-     0.0, 0.0,  1.0, 0.0, 0.0,  0.0, 0.0, 
-     1.0, 1.0,  1.0, 0.0, 0.0,  1.0, 1.0, 
-     1.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 
+     0.0, 1.0,  1.0, 1.0, 1.0,  0.0, 1.0, 
+     0.0, 0.0,  1.0, 1.0, 1.0,  0.0, 0.0, 
+     1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 
+     1.0, 0.0,  1.0, 1.0, 1.0,  1.0, 0.0, 
 ]
 
 var vertex_shader_text = "#version 110\n"
@@ -66,6 +68,12 @@ class Game {
     }
 }
 
+struct Image {
+    var width:Int = 0
+    var height:Int = 0
+    var texture:GLuint = 0
+}
+
 class App {
 
     var width:Float = 0.0
@@ -73,7 +81,6 @@ class App {
     var program:GLuint = 0
     var scale_location:GLint = 0 
     var offset_location:GLint = 0
-    var texture:GLuint = 0
 
     func run(game:Game)
     {
@@ -115,30 +122,9 @@ class App {
         glBufferData(GLenum(GL_ARRAY_BUFFER), GLsizeiptr(MemoryLayout<GLfloat>.size * Int(vertices.count)),
                                                vertices, GLenum(GL_STATIC_DRAW))
 
-        func loadTexture() -> GLuint {
-            var texture:GLuint = 0
-            glGenTextures(1, &texture)
-            glBindTexture(GLenum(GL_TEXTURE_2D), texture)
-            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_S), GL_REPEAT)
-            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_T), GL_REPEAT)
-            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MIN_FILTER), GL_NEAREST)
-            glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MAG_FILTER), GL_NEAREST)
 
-            var bytes: [UInt8] = [
-                   0, 0, 0, 0xff,  0xff, 0xff, 0xff, 0xff,
-                0xff, 0, 0, 0xff,     0, 0xff,    0, 0xff
-            ]
-            glTexImage2D(GLenum(GL_TEXTURE_2D), 0, GL_RGBA,
-                         2, 2, 0, GLenum(GL_RGBA), GLenum(GL_UNSIGNED_BYTE),
-                         &bytes)
-            glBindTexture(GLenum(GL_TEXTURE_2D), 0)
-            return texture
-        }
 
-        self.texture = loadTexture()
-        print ("texture", self.texture)
-
-        func compileShader(text:String, shader_type:GLenum) -> GLuint {
+        func compileShader(text:String, shader_type:GLenum) -> GLuint? {
             let shader = glCreateShader(shader_type)
             text.withCString {cs in
                 var cs_opt = Optional(cs)
@@ -154,14 +140,22 @@ class App {
                 var length: GLsizei = 0
                 glGetShaderInfoLog(shader, 256, &length, &buffer)
                 print(String(cString: buffer))
-                return 0
+                return nil
             }
             return shader
         }
 
-        let vertex_shader = compileShader(text: vertex_shader_text, shader_type:GLenum(GL_VERTEX_SHADER))
+        guard let vertex_shader = 
+            compileShader(text: vertex_shader_text,
+                          shader_type:GLenum(GL_VERTEX_SHADER)) else {
+                return
+        }
 
-        let fragment_shader = compileShader(text: fragment_shader_text, shader_type:GLenum(GL_FRAGMENT_SHADER))
+        guard let fragment_shader = 
+            compileShader(text: fragment_shader_text,
+                          shader_type:GLenum(GL_FRAGMENT_SHADER)) else {
+                return
+        }
 
         self.program = glCreateProgram()
         glAttachShader(self.program, vertex_shader)
@@ -169,8 +163,9 @@ class App {
         glLinkProgram(self.program)
         var link_status:GLint = 0
         glGetProgramiv(self.program, GLenum(GL_LINK_STATUS), &link_status)
-        if link_status == GLboolean(GL_TRUE) {
-            print("linked")
+        if link_status != GLboolean(GL_TRUE) {
+            print("failed to link GL program")
+            return
         }
 
         let pos_location = GLint(glGetAttribLocation(self.program, "pos"))
@@ -201,6 +196,8 @@ class App {
         self.width = Float(iwidth)
         self.height = Float(iheight)
         glClearColor(1.0, 1.0, 0.0, 1.0)
+        glEnable(GLenum(GL_BLEND))
+        glBlendFunc(GLenum(GL_SRC_ALPHA), GLenum(GL_ONE_MINUS_SRC_ALPHA))
 
         print("GL error:", glGetError())
 
@@ -229,6 +226,108 @@ class App {
         print("finished loop")
     }
 
+    func loadTexture(width:Int, height:Int, bytes: inout [UInt8]) -> GLuint {
+        var texture:GLuint = 0
+        glGenTextures(1, &texture)
+        glBindTexture(GLenum(GL_TEXTURE_2D), texture)
+        glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_S), GL_REPEAT)
+        glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_WRAP_T), GL_REPEAT)
+        glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MIN_FILTER), GL_NEAREST)
+        glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MAG_FILTER), GL_NEAREST)
+
+        //var bytes: [UInt8] = [
+        //       0, 0, 0, 0xff,  0xff, 0xff, 0xff, 0xff,
+        //    0xff, 0, 0, 0xff,     0, 0xff,    0, 0xff
+        //]
+        glTexImage2D(GLenum(GL_TEXTURE_2D), 0, GL_RGBA,
+                     Int32(width), Int32(height), 0, GLenum(GL_RGBA), GLenum(GL_UNSIGNED_BYTE),
+                     &bytes)
+        glBindTexture(GLenum(GL_TEXTURE_2D), 0)
+        return texture
+    }
+
+    func loadImage(filename:String) -> Image? {
+        var fp: UnsafeMutablePointer<FILE>? = nil
+        filename.withCString {cs in fp = fopen(cs, "rb")}
+        if fp == nil {
+            print("failed to open", filename)
+            return nil
+        }
+        defer {
+            fclose(fp)
+        }
+        var png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nil, nil, nil)
+        if png == nil {
+            print("couldn't create struct to read PNG")
+            return nil
+        }
+        var info = png_create_info_struct(png)
+        if info == nil {
+            print("couldn't create info struct to read PNG")
+            return nil
+        }
+        defer {
+            png_destroy_read_struct(&png, &info, nil)
+        }
+
+        var image = Image()
+        png_init_io(png, fp)
+        png_read_info(png, info)
+        image.width = Int(png_get_image_width(png, info))
+        image.height = Int(png_get_image_height(png, info))
+        let color_type = png_get_color_type(png, info)
+        let bit_depth = png_get_bit_depth(png, info)
+
+        print("image:", image.width, image.height)
+
+        if bit_depth == 16 {
+            png_set_strip_16(png)
+        }
+        
+        if color_type == PNG_COLOR_TYPE_PALETTE {
+            png_set_palette_to_rgb(png)
+        }
+
+        if color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8 {
+            png_set_expand_gray_1_2_4_to_8(png)
+        }
+
+        if png_get_valid(png, info, PNG_INFO_tRNS) == 0 {
+            png_set_tRNS_to_alpha(png)
+        }
+
+        if [PNG_COLOR_TYPE_RGB,
+            PNG_COLOR_TYPE_GRAY,
+            PNG_COLOR_TYPE_PALETTE].contains(Int32(color_type)) {
+                png_set_filler(png, 0xff, PNG_FILLER_AFTER)
+        }
+
+        if [PNG_COLOR_TYPE_GRAY,
+            PNG_COLOR_TYPE_GRAY_ALPHA].contains(Int32(color_type)) {
+                png_set_gray_to_rgb(png)
+        }
+
+        png_read_update_info(png, info)
+
+        var bytes = [UInt8]()
+        let rowbytes = png_get_rowbytes(png, info)
+        bytes.reserveCapacity(image.height * rowbytes)
+        var row_pointers = [Optional<UnsafeMutablePointer<UInt8>>]()
+        row_pointers.reserveCapacity(image.height)
+        let p = UnsafeMutablePointer<UInt8>(mutating:bytes)
+        // inverted loop so we invert image for GL
+        for index in stride(from: image.height-1, to: 0, by:-1) {
+            row_pointers.append(p + index * rowbytes)
+        }
+
+        print("reading image")
+        let orp = Optional(UnsafeMutablePointer(mutating:row_pointers))
+        png_read_image(png, orp)
+
+        image.texture = loadTexture(width:image.width, height:image.height, bytes:&bytes)
+        return image
+    }
+
     func drawRectCentered(x:Float, y:Float, w:Float, h:Float) {
         var scale: [GLfloat] = [ w * 2.0 / self.width, h * 2.0 / self.height ]
         var offset: [GLfloat] = [ ( (x - w / 2.0) * 2.0 / self.width ) - 1.0,
@@ -236,10 +335,21 @@ class App {
         glUseProgram(self.program)
         glUniform2fv(self.scale_location, 1, &scale)
         glUniform2fv(self.offset_location, 1, &offset)
-        glBindTexture(GLenum(GL_TEXTURE_2D), self.texture)
+        glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
+    }
+
+    func drawImageCentered(x:Float, y:Float, image:Image) {
+        let w = Float(image.width)
+        let h = Float(image.height)
+        var scale: [GLfloat] = [ w * 2.0 / self.width, h * 2.0 / self.height ]
+        var offset: [GLfloat] = [ ( (x - w / 2.0) * 2.0 / self.width ) - 1.0,
+                                  ( (y - h / 2.0) * 2.0 / self.height ) - 1.0 ]
+        glUseProgram(self.program)
+        glUniform2fv(self.scale_location, 1, &scale)
+        glUniform2fv(self.offset_location, 1, &offset)
+        glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
         glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
         glBindTexture(GLenum(GL_TEXTURE_2D), 0)
     }
-
 }
 
