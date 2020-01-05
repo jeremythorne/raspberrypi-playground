@@ -1,13 +1,30 @@
 import SDL
 
+class Game {
+    func setup () {
+    }
+
+    func update () {
+    }
+
+    func draw () {
+    }
+}
+
+class Image {
+    var width:Int = 0
+    var height:Int = 0
+}
 
 class App {
+    let width:Float = 640.0
+    let height:Float = 480.0
     var renderer:Renderer? = nil
-    func run() {
+    func run(game:Game) {
         do {
 
             let sdl = try SDL()
-            let window = try sdl.createWindow(width: 640, height: 480)
+            let window = try sdl.createWindow(width: Int(self.width), height: Int(self.height))
             self.renderer = try window.createRenderer()
 
             var shouldQuit:Bool = false
@@ -19,8 +36,8 @@ class App {
                     shouldQuit = type == SDL_QUIT
                 }
 
-                update()
-                render()
+                update(game:game)
+                draw(game:game)
             }
         } catch SDLError.error(let message) {
             print ("error:", message)
@@ -30,11 +47,20 @@ class App {
         }
     }
 
-    func update() {
+    func update(game:Game) {
+        game.update()
     }
 
-    func render() {
+    func draw(game:Game) {
         self.renderer!.clear()
+        game.draw()
         self.renderer!.flip()
+    }
+    
+    func loadImage(filename:String) -> Image? {
+        return nil
+    }
+    
+    func drawImageCentered(x:Float, y:Float, image:Image) {
     }
 }
