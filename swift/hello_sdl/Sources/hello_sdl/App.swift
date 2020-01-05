@@ -1,5 +1,3 @@
-import SDL
-
 class Game {
     func setup () {
     }
@@ -12,8 +10,15 @@ class Game {
 }
 
 class Image {
-    var width:Int = 0
-    var height:Int = 0
+    var width:Int
+    var height:Int
+    var texture:Texture
+
+    init (width: Int, height: Int, texture: Texture) {
+        self.width = width
+        self.height = height
+        self.texture = texture
+    }
 }
 
 class App {
@@ -30,10 +35,9 @@ class App {
             var shouldQuit:Bool = false
 
             while !shouldQuit {
-                var event = SDL_Event()
+                var event = Event()
                 while sdl.pollEvent(event:&event) {
-                    let type = SDL_EventType(event.type)
-                    shouldQuit = type == SDL_QUIT
+                    shouldQuit = event.isQuit() 
                 }
 
                 update(game:game)
@@ -52,15 +56,24 @@ class App {
     }
 
     func draw(game:Game) {
-        self.renderer!.clear()
+        guard let renderer = self.renderer else {
+            return
+        }
+        renderer.clear()
         game.draw()
-        self.renderer!.flip()
+        renderer.flip()
     }
     
     func loadImage(filename:String) -> Image? {
-        return nil
+        guard let renderer = self.renderer else {
+            return nil
+	    }
+        guard let texture = renderer.loadImage(filename:filename) else {
+            return nil
+        }
+        return Image(width:texture.width, height:texture.height, texture:texture)
     }
     
-    func drawImageCentered(x:Float, y:Float, image:Image) {
+    func drawImageCentered(x:Float, y:Float, image:Image?) {
     }
 }
