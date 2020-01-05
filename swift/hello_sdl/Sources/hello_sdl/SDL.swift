@@ -126,6 +126,7 @@ class Renderer {
                 print("failed to set texture pixels")
                 return nil
             }
+            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND)
             return Texture(width:png.width, height:png.height, texture:texture!)
         } catch PNG.error.error(let message) {
             print ("error loading \(filename):", message)
