@@ -35,8 +35,7 @@ class App {
             var shouldQuit:Bool = false
 
             while !shouldQuit {
-                var event = Event()
-                while sdl.pollEvent(event:&event) {
+                while let event = sdl.pollEvent() {
                     shouldQuit = event.isQuit() 
                 }
 
@@ -66,14 +65,23 @@ class App {
     
     func loadImage(filename:String) -> Image? {
         guard let renderer = self.renderer else {
+            print("no renderer")
             return nil
 	    }
         guard let texture = renderer.loadImage(filename:filename) else {
+            print("failed to load \(filename)")
             return nil
         }
         return Image(width:texture.width, height:texture.height, texture:texture)
     }
     
     func drawImageCentered(x:Float, y:Float, image:Image?) {
+        guard let renderer = self.renderer else {
+            return
+        }
+        guard let im = image else {
+            return
+        }
+        renderer.drawCentered(x:Int(x), y:Int(y), texture:im.texture)
     }
 }
