@@ -73,8 +73,7 @@ class PNG {
         var row_pointers = [Optional<UnsafeMutablePointer<UInt8>>]()
         row_pointers.reserveCapacity(self.height)
         let p = UnsafeMutablePointer<UInt8>(mutating:self.bytes)
-        // inverted loop so we invert image for GL
-        for index in stride(from: self.height-1, to: 0, by:-1) {
+        for index in 0..<self.height {
             row_pointers.append(p + index * rowbytes)
         }
 

@@ -34,13 +34,15 @@ class App {
 
             var shouldQuit:Bool = false
 
+            setup(game)
+
             while !shouldQuit {
                 while let event = sdl.pollEvent() {
                     shouldQuit = event.isQuit() 
                 }
 
-                update(game:game)
-                draw(game:game)
+                update(game)
+                draw(game)
             }
         } catch SDLError.error(let message) {
             print ("error:", message)
@@ -50,11 +52,15 @@ class App {
         }
     }
 
-    func update(game:Game) {
+    func setup(_ game:Game) {
+        game.setup()
+    }
+
+    func update(_ game:Game) {
         game.update()
     }
 
-    func draw(game:Game) {
+    func draw(_ game:Game) {
         guard let renderer = self.renderer else {
             return
         }
