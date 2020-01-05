@@ -60,17 +60,21 @@ class Window {
     }
 }
 
-class Event {
-    let type:SDL_EventType
-    let event:SDL_Event
+enum Event {
+    case quit
+    case keyboard(pressed:Bool, scanCode:String, repeat:Bool)
+    case other
 
     init(sdl_event:SDL_Event) {
-        self.type = SDL_EventType(sdl_event.type)
-        self.event = sdl_event
-    }
-
-    func isQuit() -> Bool {
-        return self.type == SDL_QUIT
+        let type = SDL_EventType(sdl_event.type)
+        switch type {
+        case SDL_QUIT:
+            self = .quit
+        case SDL_KEYDOWN:
+            self = .keyboard(pressed:true, scanCode:"", repeat:false)
+        default:
+            self = .other
+        }
     }
 }
 

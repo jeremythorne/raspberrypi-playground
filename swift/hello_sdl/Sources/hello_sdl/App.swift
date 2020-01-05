@@ -38,7 +38,12 @@ class App {
 
             while !shouldQuit {
                 while let event = sdl.pollEvent() {
-                    shouldQuit = event.isQuit() 
+                    switch event {
+                    case .quit:
+                        shouldQuit = true
+                    default:
+                        continue
+                    }
                 }
 
                 update(game)
