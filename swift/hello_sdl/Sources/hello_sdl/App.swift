@@ -22,36 +22,60 @@ class Image {
 }
 
 class App {
-    let width:Float = 640.0
-    let height:Float = 480.0
+    var width:Float = 0.0
+    var height:Float = 0.0
+    var sdl:SDL? = nil
+    var keyboard:Keyboard? = nil
     var renderer:Renderer? = nil
-    func run(game:Game) {
-        do {
+    var shouldQuit:Bool = false
 
-            let sdl = try SDL()
-            let window = try sdl.createWindow(width: Int(self.width), height: Int(self.height))
+    init() {
+        do {
+            self.sdl = try SDL()
+            self.keyboard = Keyboard()
+        } catch SDLError.error(let message) {
+            print ("error:", message)
+        }
+        catch {
+            print("unknown error")
+        }
+    }
+
+    func run(width:Int, height:Int, game:Game) {
+        guard let sdl = self.sdl else {
+            return
+        }
+        self.width = Float(width)
+        self.height = Float(height)
+        do {
+            let window = try sdl.createWindow(width: width, height: height)
             self.renderer = try window.createRenderer()
 
-            var shouldQuit:Bool = false
+            self.shouldQuit = false
 
             setup(game)
 
-            while !shouldQuit {
+            while !self.shouldQuit {
                 while let event = sdl.pollEvent() {
                     switch event {
                     case .quit:
-                        shouldQuit = true
+                        self.shouldQuit = true
                     default:
                         continue
                     }
                 }
-
+                if pressed(KeyCode.escape) {
+                    self.shouldQuit = true
+                }
+                if self.shouldQuit {
+                    break
+                }
                 update(game)
                 draw(game)
             }
         } catch SDLError.error(let message) {
             print ("error:", message)
-        } 
+        }
         catch {
             print("unknown error")
         }
@@ -94,5 +118,12 @@ class App {
             return
         }
         renderer.drawCentered(x:Int(x), y:Int(y), texture:im.texture)
+    }
+
+    func pressed(_ key:KeyCode) -> Bool {
+        guard let keyboard = self.keyboard else {
+            return false
+        }
+        return keyboard.pressed(key)
     }
 }

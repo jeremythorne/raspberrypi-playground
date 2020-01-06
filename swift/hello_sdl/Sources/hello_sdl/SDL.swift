@@ -62,7 +62,6 @@ class Window {
 
 enum Event {
     case quit
-    case keyboard(pressed:Bool, scanCode:String, repeat:Bool)
     case other
 
     init(sdl_event:SDL_Event) {
@@ -70,8 +69,6 @@ enum Event {
         switch type {
         case SDL_QUIT:
             self = .quit
-        case SDL_KEYDOWN:
-            self = .keyboard(pressed:true, scanCode:"", repeat:false)
         default:
             self = .other
         }
@@ -89,6 +86,21 @@ class Texture {
     }
     deinit {
         SDL_DestroyTexture(self.texture)
+    }
+}
+
+class Keyboard {
+    let state:UnsafePointer<Uint8>
+    var length:Int32 = 0
+    init() {
+        self.state = SDL_GetKeyboardState(&self.length)
+    }
+
+    func pressed(_ key:KeyCode) -> Bool {
+        if key.rawValue < 0 || key.rawValue > self.length {
+            return false
+        }
+        return state[key.rawValue] == 1
     }
 }
 

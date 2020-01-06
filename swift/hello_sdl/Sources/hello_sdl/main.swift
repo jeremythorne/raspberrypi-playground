@@ -53,6 +53,12 @@ class MyGame : Game {
     }
 
     override func update() {
+        if app.pressed(KeyCode.left) {
+            print("left pressed")
+        } else if app.pressed(KeyCode.right) {
+            print("right pressed")
+        }
+
         for ball in balls {
             ball.update()
         }
@@ -67,4 +73,4 @@ class MyGame : Game {
 
 print("Hello, world!")
 
-app.run(game:MyGame())
+app.run(width:640, height:480, game:MyGame())
