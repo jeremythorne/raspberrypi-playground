@@ -1,4 +1,4 @@
-enum KeyCode:Int {
+public enum KeyCode:Int {
     case a = 4
     case b = 5
     case c = 6

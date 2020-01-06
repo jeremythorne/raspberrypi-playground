@@ -14,8 +14,11 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages which this package depends on.
         .systemLibrary(name: "clibs"),
         .target(
-            name: "hello_sdl",
+            name: "sgz",
             dependencies: ["clibs"]),
+        .target(
+            name: "hello_sdl",
+            dependencies: ["sgz"]),
         .testTarget(
             name: "hello_sdlTests",
             dependencies: ["hello_sdl"]),

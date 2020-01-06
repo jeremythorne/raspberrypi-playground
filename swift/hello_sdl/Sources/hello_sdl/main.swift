@@ -1,4 +1,6 @@
-let app = App()
+import sgz
+
+let app = sgz.App()
 
 class Ball {
     var gx:Float = 0.0
@@ -7,9 +9,9 @@ class Ball {
     var vy:Float = Float.random(in: -3.0...3.0)
     let hx:Float
     let hy:Float
-    let image:Image
+    let image:sgz.Image
 
-    init (image:Image) {
+    init (image:sgz.Image) {
         self.image = image
         self.gx = app.width / 2.0
         self.gy = app.height / 2.0
@@ -43,7 +45,7 @@ class Ball {
 }
 
 var balls = [Ball]()
-class MyGame : Game {
+class MyGame : sgz.Game {
 
     override func setup() {
         let image = app.loadImage(filename:"images/hello.png")!
@@ -53,9 +55,9 @@ class MyGame : Game {
     }
 
     override func update() {
-        if app.pressed(KeyCode.left) {
+        if app.pressed(sgz.KeyCode.left) {
             print("left pressed")
-        } else if app.pressed(KeyCode.right) {
+        } else if app.pressed(sgz.KeyCode.right) {
             print("right pressed")
         }
 

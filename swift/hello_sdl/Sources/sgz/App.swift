@@ -1,17 +1,19 @@
-class Game {
-    func setup () {
+open class Game {
+    public init() {}
+
+    open func setup () {
     }
 
-    func update () {
+    open func update () {
     }
 
-    func draw () {
+    open func draw () {
     }
 }
 
-class Image {
-    var width:Int
-    var height:Int
+public class Image {
+    public var width:Int
+    public var height:Int
     var texture:Texture
 
     init (width: Int, height: Int, texture: Texture) {
@@ -21,15 +23,15 @@ class Image {
     }
 }
 
-class App {
-    var width:Float = 0.0
-    var height:Float = 0.0
+public class App {
+    public var width:Float = 0.0
+    public var height:Float = 0.0
     var sdl:SDL? = nil
     var keyboard:Keyboard? = nil
     var renderer:Renderer? = nil
     var shouldQuit:Bool = false
 
-    init() {
+    public init() {
         do {
             self.sdl = try SDL()
             self.keyboard = Keyboard()
@@ -41,7 +43,7 @@ class App {
         }
     }
 
-    func run(width:Int, height:Int, game:Game) {
+    public func run(width:Int, height:Int, game:Game) {
         guard let sdl = self.sdl else {
             return
         }
@@ -98,7 +100,7 @@ class App {
         renderer.flip()
     }
     
-    func loadImage(filename:String) -> Image? {
+    public func loadImage(filename:String) -> Image? {
         guard let renderer = self.renderer else {
             print("no renderer")
             return nil
@@ -110,7 +112,7 @@ class App {
         return Image(width:texture.width, height:texture.height, texture:texture)
     }
     
-    func drawImageCentered(x:Float, y:Float, image:Image?) {
+    public func drawImageCentered(x:Float, y:Float, image:Image?) {
         guard let renderer = self.renderer else {
             return
         }
@@ -120,7 +122,7 @@ class App {
         renderer.drawCentered(x:Int(x), y:Int(y), texture:im.texture)
     }
 
-    func pressed(_ key:KeyCode) -> Bool {
+    public func pressed(_ key:KeyCode) -> Bool {
         guard let keyboard = self.keyboard else {
             return false
         }
