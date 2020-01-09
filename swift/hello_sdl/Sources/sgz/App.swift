@@ -1,13 +1,29 @@
 open class Game {
     public init() {}
 
-    open func setup () {
+    open func setup (app:App) {
     }
 
-    open func update () {
+    open func update (app:App) {
     }
 
-    open func draw () {
+    open func draw (app:App) {
+    }
+}
+
+open class Actor {
+    public var image:String = ""
+    public var x:Float = 0
+    public var y:Float = 0
+
+    public init(image:String, center:(x:Float, y:Float)) {
+        self.image = image
+        self.x = center.x
+        self.y = center.y
+    }
+
+    public func draw (app:App) {
+        app.blit(name:self.image, center:(self.x, self.y))
     }
 }
 
@@ -23,6 +39,11 @@ public class Image {
     }
 }
 
+public func run(width:Int, height:Int, game:Game) {
+    let app = App()
+    app.run(width:width, height:height, game:game)
+}
+
 public class App {
     public var width:Float = 0.0
     public var height:Float = 0.0
@@ -30,6 +51,7 @@ public class App {
     var keyboard:Keyboard? = nil
     var renderer:Renderer? = nil
     var shouldQuit:Bool = false
+    var imageCache = [String: Image]()
 
     public init() {
         do {
@@ -84,23 +106,26 @@ public class App {
     }
 
     func setup(_ game:Game) {
-        game.setup()
+        game.setup(app:self)
     }
 
     func update(_ game:Game) {
-        game.update()
+        game.update(app:self)
     }
 
     func draw(_ game:Game) {
         guard let renderer = self.renderer else {
             return
         }
-        renderer.clear()
-        game.draw()
+        game.draw(app:self)
         renderer.flip()
     }
     
-    public func loadImage(filename:String) -> Image? {
+    public func loadImage(name:String) -> Image? {
+        let filename = "images/" + name + ".png"
+        if let image = self.imageCache[name] {
+            return image
+        }
         guard let renderer = self.renderer else {
             print("no renderer")
             return nil
@@ -109,17 +134,37 @@ public class App {
             print("failed to load \(filename)")
             return nil
         }
-        return Image(width:texture.width, height:texture.height, texture:texture)
+        let image = Image(width:texture.width, height:texture.height, texture:texture)
+        self.imageCache[name] = image
+        return image
     }
-    
-    public func drawImageCentered(x:Float, y:Float, image:Image?) {
+
+    public func clear() {
+        if let renderer = self.renderer {
+            renderer.clear()
+        }
+    }
+
+    public func blit(name:String, pos:(x:Float, y:Float)) {
+        self.blit(image:self.loadImage(name:name), pos:pos)
+    }
+
+    public func blit(name:String, center:(x:Float, y:Float)) {
+        if let image = self.loadImage(name:name) {
+            let pos = (center.x - Float(image.width) / 2.0,
+                       center.y - Float(image.height) / 2.0)
+            self.blit(image:image, pos:pos)
+        }
+    }
+
+    public func blit(image:Image?, pos:(x:Float, y:Float)) {
         guard let renderer = self.renderer else {
             return
         }
         guard let im = image else {
             return
         }
-        renderer.drawCentered(x:Int(x), y:Int(y), texture:im.texture)
+        renderer.blit(texture:im.texture, pos:(x:Int(pos.x), y:Int(pos.y)))
     }
 
     public func pressed(_ key:KeyCode) -> Bool {

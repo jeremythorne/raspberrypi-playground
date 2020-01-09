@@ -152,10 +152,10 @@ class Renderer {
         return nil
     }
 
-    func drawCentered(x: Int, y:Int, texture:Texture) {
+    func blit(texture:Texture, pos:(x:Int, y:Int)) {
         var rect = SDL_Rect()
-        rect.x = Int32(x - texture.width / 2)
-        rect.y = Int32(y - texture.height / 2)
+        rect.x = Int32(pos.x)
+        rect.y = Int32(pos.y)
         rect.w = Int32(texture.width)
         rect.h = Int32(texture.height)
         SDL_RenderCopy(self.renderer, texture.texture, nil, &rect)
