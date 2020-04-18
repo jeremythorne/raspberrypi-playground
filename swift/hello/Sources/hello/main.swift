@@ -11,29 +11,29 @@ class Ball {
     var hy:Float = 0.0
 
     func setup() {
-        self.gx = app.width / 2.0
-        self.gy = app.height / 2.0
-        self.hx = Float(image.width) / 2.0
-        self.hy = Float(image.height) / 2.0
+        gx = app.width / 2.0
+        gy = app.height / 2.0
+        hx = Float(image.width) / 2.0
+        hy = Float(image.height) / 2.0
     }
 
     func update() {
-        self.gx += self.vx
-        self.gy += self.vy
-        if self.gx > app.width - self.hx {
-            self.gx = app.width - self.hx
-            self.vx = -self.vx
-        } else if self.gx < self.hx {
-            self.gx = self.hx
-            self.vx = -self.vx
+        gx += vx
+        gy += vy
+        if gx > app.width - hx {
+            gx = app.width - hx
+            vx = -vx
+        } else if gx < hx {
+            gx = hx
+            vx = -vx
         }
 
-        if self.gy > app.height - self.hy {
-            self.gy = app.height - self.hy
-            self.vy = -self.vy
-        } else if self.gy < self.hy {
-            self.gy = self.hy
-            self.vy = -self.vy
+        if gy > app.height - hy {
+            gy = app.height - hy
+            vy = -vy
+        } else if gy < hy {
+            gy = hy
+            vy = -vy
         }
     }
 
@@ -51,21 +51,16 @@ class MyGame : Game {
 
     override func setup() {
         image = app.loadImage(filename:"images/hello.png")!
-        for ball in balls {
-            ball.setup()
-        }
+        print("image read")
+        balls.forEach { $0.setup() }
     }
 
     override func update() {
-        for ball in balls {
-            ball.update()
-        }
+        balls.forEach { $0.update() }
     }
 
     override func draw() {
-        for ball in balls {
-            ball.draw()
-        }
+        balls.forEach { $0.draw() }
     }
 }
 
