@@ -4,8 +4,11 @@
 // github.com/sakrist/Swift_OpenGL_Example - iOS, Linux, Android OpenGL is Swift 
 // pygame-zero.readthedocs.io - simple python game framework
 // gist.github.com/niw/5963798 - libpng code
-
-import GL
+#if os(OSX)
+  import OpenGL
+#else
+  import GL
+#endif
 import GLFW
 import LIBPNG
 
