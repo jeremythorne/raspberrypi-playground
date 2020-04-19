@@ -4,7 +4,7 @@ module GLFW [system] {
     export *
 }
 
-module LIBPNG [system] {
+module CLIBPNG [system] {
     header "/usr/local/include/libpng16/png.h"
     link "png16"
     export *

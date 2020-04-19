@@ -10,7 +10,6 @@
   import GL
 #endif
 import GLFW
-import LIBPNG
 
 func error_callback(error: Int32, description: Optional<UnsafePointer<Int8>>)
 {
@@ -30,10 +29,10 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var vertices: [GLfloat] = [
-     0.0, 1.0,  1.0, 1.0, 1.0,  0.0, 1.0, 
-     0.0, 0.0,  1.0, 1.0, 1.0,  0.0, 0.0, 
-     1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 
-     1.0, 0.0,  1.0, 1.0, 1.0,  1.0, 0.0, 
+     0.0, 1.0,  1.0, 1.0, 1.0,  0.0, 0.0, 
+     0.0, 0.0,  1.0, 1.0, 1.0,  0.0, 1.0, 
+     1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 0.0, 
+     1.0, 0.0,  1.0, 1.0, 1.0,  1.0, 1.0, 
 ]
 
 var vertex_shader_text = "#version 110\n"
@@ -230,6 +229,7 @@ class App {
     }
 
     func loadTexture(width:Int, height:Int, bytes: inout [UInt8]) -> GLuint {
+        print("loading texture")
         var texture:GLuint = 0
         glGenTextures(1, &texture)
         glBindTexture(GLenum(GL_TEXTURE_2D), texture)
@@ -250,84 +250,13 @@ class App {
     }
 
     func loadImage(filename:String) -> Image? {
-        var fp: UnsafeMutablePointer<FILE>? = nil
-        filename.withCString {cs in fp = fopen(cs, "rb")}
-        if fp == nil {
-            print("failed to open", filename)
+        guard let png = try? PNG(filename:filename) else {
             return nil
         }
-        defer {
-            fclose(fp)
-        }
-        var png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nil, nil, nil)
-        if png == nil {
-            print("couldn't create struct to read PNG")
-            return nil
-        }
-        var info = png_create_info_struct(png)
-        if info == nil {
-            print("couldn't create info struct to read PNG")
-            return nil
-        }
-        defer {
-            png_destroy_read_struct(&png, &info, nil)
-        }
-
         var image = Image()
-        png_init_io(png, fp)
-        png_read_info(png, info)
-        image.width = Int(png_get_image_width(png, info))
-        image.height = Int(png_get_image_height(png, info))
-        let color_type = png_get_color_type(png, info)
-        let bit_depth = png_get_bit_depth(png, info)
-
-        print("image:", image.width, image.height)
-
-        if bit_depth == 16 {
-            png_set_strip_16(png)
-        }
-        
-        if color_type == PNG_COLOR_TYPE_PALETTE {
-            png_set_palette_to_rgb(png)
-        }
-
-        if color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8 {
-            png_set_expand_gray_1_2_4_to_8(png)
-        }
-
-        if png_get_valid(png, info, PNG_INFO_tRNS) == 0 {
-            png_set_tRNS_to_alpha(png)
-        }
-
-        if [PNG_COLOR_TYPE_RGB,
-            PNG_COLOR_TYPE_GRAY,
-            PNG_COLOR_TYPE_PALETTE].contains(Int32(color_type)) {
-                png_set_filler(png, 0xff, PNG_FILLER_AFTER)
-        }
-
-        if [PNG_COLOR_TYPE_GRAY,
-            PNG_COLOR_TYPE_GRAY_ALPHA].contains(Int32(color_type)) {
-                png_set_gray_to_rgb(png)
-        }
-
-        png_read_update_info(png, info)
-
-        var bytes = [UInt8]()
-        let rowbytes = png_get_rowbytes(png, info)
-        bytes.reserveCapacity(image.height * rowbytes)
-        var row_pointers = [Optional<UnsafeMutablePointer<UInt8>>]()
-        row_pointers.reserveCapacity(image.height)
-        let p = UnsafeMutablePointer<UInt8>(mutating:bytes)
-        // inverted loop so we invert image for GL
-        for index in stride(from: image.height-1, to: 0, by:-1) {
-            row_pointers.append(p + index * rowbytes)
-        }
-
-        print("reading image")
-        let orp = Optional(UnsafeMutablePointer(mutating:row_pointers))
-        png_read_image(png, orp)
-
-        image.texture = loadTexture(width:image.width, height:image.height, bytes:&bytes)
+        image.width = png.width
+        image.height = png.height
+        image.texture = loadTexture(width:image.width, height:image.height, bytes:&png.bytes)
         return image
     }
 
