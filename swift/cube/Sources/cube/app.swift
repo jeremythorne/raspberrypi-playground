@@ -29,34 +29,29 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var vertices: [GLfloat] = [
-     0.0, 1.0,  1.0, 1.0, 1.0,  0.0, 0.0, 
-     0.0, 0.0,  1.0, 1.0, 1.0,  0.0, 1.0, 
-     1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 0.0, 
-     1.0, 0.0,  1.0, 1.0, 1.0,  1.0, 1.0, 
+     0.0, 1.0, 1.0,  0.0, 0.0, 
+     0.0, 0.0, 1.0,  0.0, 1.0, 
+     1.0, 1.0, 1.0,  1.0, 0.0, 
+     1.0, 0.0, 1.0,  1.0, 1.0, 
 ]
 
 var vertex_shader_text = "#version 110\n"
-+ "attribute vec3 col;\n"
-+ "attribute vec2 pos;\n"
++ "attribute vec3 pos;\n"
 + "attribute vec2 tex_coord;\n"
-+ "uniform vec2 scale;\n"
-+ "uniform vec2 offset;\n"
-+ "varying vec3 vcolor;\n"
++ "uniform mat4 mvp;\n"
 + "varying vec2 vtex_coord;\n"
 + "void main()\n"
 + "{\n"
-+ "  gl_Position = vec4(pos * scale + offset, 0.0, 1.0);\n"
-+ "  vcolor = col;\n"
++ "  gl_Position = mvp * vec4(pos, 1.0);\n"
 + "  vtex_coord = tex_coord;\n"
 + "}\n"
 
 var fragment_shader_text = "#version 110\n"
-+ "varying vec3 vcolor;\n"
 + "varying vec2 vtex_coord;\n"
 + "uniform sampler2D image;\n"
 + "void main()\n"
 + "{\n"
-+ "  gl_FragColor = vec4(vcolor, 1.0) * texture2D(image, vtex_coord);\n"
++ "  gl_FragColor = texture2D(image, vtex_coord);\n"
 + "}\n"
 
 class Game {
@@ -81,8 +76,7 @@ class App {
     var width:Float = 0.0
     var height:Float = 0.0
     var program:GLuint = 0
-    var scale_location:GLint = 0 
-    var offset_location:GLint = 0
+    var mvp_location:GLint = 0 
 
     func run(game:Game)
     {
@@ -171,25 +165,19 @@ class App {
         }
 
         let pos_location = GLint(glGetAttribLocation(self.program, "pos"))
-        let col_location = GLint(glGetAttribLocation(self.program, "col"))
         let tex_coord_location = GLint(glGetAttribLocation(self.program, "tex_coord"))
-        self.scale_location = GLint(glGetUniformLocation(self.program, "scale")) 
-        self.offset_location = GLint(glGetUniformLocation(self.program, "offset")) 
+        self.mvp_location = GLint(glGetUniformLocation(self.program, "mvp")) 
 
-        print("program attribute locations", pos_location, col_location, tex_coord_location)
+        print("program attribute locations", pos_location,tex_coord_location)
 
         glEnableVertexAttribArray(GLuint(pos_location))
-        glVertexAttribPointer(GLuint(pos_location), 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 7,
+        glVertexAttribPointer(GLuint(pos_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLfloat>.size) * 5,
                                            UnsafeRawPointer(bitPattern: 0))
-        glEnableVertexAttribArray(GLuint(col_location))
-        glVertexAttribPointer(GLuint(col_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 7,
-                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 2))
         glEnableVertexAttribArray(GLuint(tex_coord_location))
         glVertexAttribPointer(GLuint(tex_coord_location), 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 7,
-                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 5))
+                                GLsizei(MemoryLayout<GLfloat>.size) * 5,
+                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 3))
         
         var iwidth: Int32 = 0
         var iheight: Int32 = 0
@@ -260,25 +248,17 @@ class App {
         return image
     }
 
-    func drawRectCentered(x:Float, y:Float, w:Float, h:Float) {
-        var scale: [GLfloat] = [ w * 2.0 / self.width, h * 2.0 / self.height ]
-        var offset: [GLfloat] = [ ( (x - w / 2.0) * 2.0 / self.width ) - 1.0,
-                                  ( (y - h / 2.0) * 2.0 / self.height ) - 1.0 ]
-        glUseProgram(self.program)
-        glUniform2fv(self.scale_location, 1, &scale)
-        glUniform2fv(self.offset_location, 1, &offset)
-        glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
-    }
-
     func drawImageCentered(x:Float, y:Float, image:Image) {
         let w = Float(image.width)
         let h = Float(image.height)
-        var scale: [GLfloat] = [ w * 2.0 / self.width, h * 2.0 / self.height ]
-        var offset: [GLfloat] = [ ( (x - w / 2.0) * 2.0 / self.width ) - 1.0,
-                                  ( (y - h / 2.0) * 2.0 / self.height ) - 1.0 ]
+        var mvp: [GLfloat] = [
+            w * 2.0 / width, 0.0, 0.0, x / width,
+            0.0, h * 2.0 / height, 0.0, y / height,
+            0.0, 0.0, 1.0, 0.0,
+            0.0, 0.0, 0.0, 1.0,
+        ]
         glUseProgram(self.program)
-        glUniform2fv(self.scale_location, 1, &scale)
-        glUniform2fv(self.offset_location, 1, &offset)
+        glUniformMatrix4fv(self.mvp_location, 1, GLboolean(GL_TRUE), &mvp)
         glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
         glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
         glBindTexture(GLenum(GL_TEXTURE_2D), 0)
