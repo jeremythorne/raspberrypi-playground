@@ -5,40 +5,32 @@ var image = Image()
 class Ball {
     var gx:Float = 0.0
     var gy:Float = 0.0
-    var vx:Float = Float.random(in: -3.0...3.0)
-    var vy:Float = Float.random(in: -3.0...3.0)
-    var hx:Float = 0.0
-    var hy:Float = 0.0
+    var gz:Float = -2.5
+    var vx:Float = Float.random(in: -0.1...0.1)
+    var vy:Float = Float.random(in: -0.1...0.1)
+    var vz:Float = Float.random(in: -0.1...0.1)
 
     func setup() {
-        gx = app.width / 2.0
-        gy = app.height / 2.0
-        hx = Float(image.width) / 2.0
-        hy = Float(image.height) / 2.0
     }
 
     func update() {
         gx += vx
         gy += vy
-        if gx > app.width - hx {
-            gx = app.width - hx
-            vx = -vx
-        } else if gx < hx {
-            gx = hx
+        gz += vz
+        if gx > 1.0 || gx < -1.0 {
             vx = -vx
         }
+        if gy > 1.0 || gy < -1.0 {
+            vy = -vy
+        }
+        if gz > -1.0 || gz < -5.0 {
+            vz = -vz
+        } 
 
-        if gy > app.height - hy {
-            gy = app.height - hy
-            vy = -vy
-        } else if gy < hy {
-            gy = hy
-            vy = -vy
-        }
     }
 
     func draw() {
-        app.drawImageCentered(x:self.gx, y:self.gy, image:image)
+        app.drawImageCentered(x:gx, y:gy, z:gz, image:image)
     }
 }
 

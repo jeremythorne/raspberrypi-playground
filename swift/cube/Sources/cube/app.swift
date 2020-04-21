@@ -29,10 +29,10 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var vertices: [GLfloat] = [
-     0.0, 1.0, 1.0,  0.0, 0.0, 
-     0.0, 0.0, 1.0,  0.0, 1.0, 
-     1.0, 1.0, 1.0,  1.0, 0.0, 
-     1.0, 0.0, 1.0,  1.0, 1.0, 
+     0.0, 1.0, 0.0,  0.0, 0.0, 
+     0.0, 0.0, 0.0,  0.0, 1.0, 
+     1.0, 1.0, 0.0,  1.0, 0.0, 
+     1.0, 0.0, 0.0,  1.0, 1.0, 
 ]
 
 var vertex_shader_text = "#version 110\n"
@@ -69,6 +69,67 @@ struct Image {
     var width:Int = 0
     var height:Int = 0
     var texture:GLuint = 0
+}
+
+class Mat4 {
+    var a = [
+        1.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0 ]
+
+    func mult(_ b:Mat4) {
+        let c = [
+            a[0] * b.a[0] + a[1] * b.a[4] + a[2] * b.a[8] + a[3] * b.a[12],
+            a[0] * b.a[1] + a[1] * b.a[5] + a[2] * b.a[9] + a[3] * b.a[13],
+            a[0] * b.a[2] + a[1] * b.a[6] + a[2] * b.a[10] + a[3] * b.a[14],
+            a[0] * b.a[3] + a[1] * b.a[7] + a[2] * b.a[11] + a[3] * b.a[15],
+
+            a[4] * b.a[0] + a[5] * b.a[4] + a[6] * b.a[8] +  a[7] * b.a[12],
+            a[4] * b.a[1] + a[5] * b.a[5] + a[6] * b.a[9] +  a[7] * b.a[13],
+            a[4] * b.a[2] + a[5] * b.a[6] + a[6] * b.a[10] + a[7] * b.a[14],
+            a[4] * b.a[3] + a[5] * b.a[7] + a[6] * b.a[11] + a[7] * b.a[15],
+
+            a[8] * b.a[0] + a[9] * b.a[4] + a[10] * b.a[8] +  a[11] * b.a[12],
+            a[8] * b.a[1] + a[9] * b.a[5] + a[10] * b.a[9] +  a[11] * b.a[13],
+            a[8] * b.a[2] + a[9] * b.a[6] + a[10] * b.a[10] + a[11] * b.a[14],
+            a[8] * b.a[3] + a[9] * b.a[7] + a[10] * b.a[11] + a[11] * b.a[15],
+
+            a[12] * b.a[0] + a[13] * b.a[4] + a[14] * b.a[8] +  a[15] * b.a[12],
+            a[12] * b.a[1] + a[13] * b.a[5] + a[14] * b.a[9] +  a[15] * b.a[13],
+            a[12] * b.a[2] + a[13] * b.a[6] + a[14] * b.a[10] + a[15] * b.a[14],
+            a[12] * b.a[3] + a[13] * b.a[7] + a[14] * b.a[11] + a[15] * b.a[15],
+        ]
+        a = c
+    }
+
+    func projection() {
+        //depth range 1-5
+        for i in 0..<16 {
+            a[i] = 0
+        }
+        a[0] = 1
+        a[5] = 1
+        a[10] = -6.0/4
+        a[11] = -10.0/4
+        a[14] = -1
+    }
+
+    func translate(_ x:Float, _ y:Float, _ z:Float) {
+        a[12] += Double(x)
+        a[13] += Double(y)
+        a[14] += Double(z)
+    }
+
+    func toGL() -> [GLfloat] {
+        let glf:[GLfloat] = [
+            GLfloat(a[0]),  GLfloat(a[1]),  GLfloat(a[2]),  GLfloat(a[3]),
+            GLfloat(a[4]),  GLfloat(a[5]),  GLfloat(a[6]),  GLfloat(a[7]),
+            GLfloat(a[8]),  GLfloat(a[9]),  GLfloat(a[10]), GLfloat(a[11]),
+            GLfloat(a[12]), GLfloat(a[13]), GLfloat(a[14]), GLfloat(a[15])
+        ]
+        return glf
+    }
 }
 
 class App {
@@ -183,9 +244,11 @@ class App {
         var iheight: Int32 = 0
         glfwGetFramebufferSize(window, &iwidth, &iheight)
         glViewport(0, 0, iwidth, iheight)
+        glDepthRange(1, 5)
+        //glEnable(GLenum(GL_DEPTH_TEST))
         self.width = Float(iwidth)
         self.height = Float(iheight)
-        glClearColor(1.0, 1.0, 0.0, 1.0)
+        glClearColor(0.8, 0.8, 1.0, 1.0)
         glEnable(GLenum(GL_BLEND))
         glBlendFunc(GLenum(GL_SRC_ALPHA), GLenum(GL_ONE_MINUS_SRC_ALPHA))
 
@@ -206,7 +269,7 @@ class App {
         while glfwWindowShouldClose(window) == 0 {
             update()
         
-            glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
+            glClear(GLbitfield(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT))
         
             draw()
 
@@ -248,17 +311,15 @@ class App {
         return image
     }
 
-    func drawImageCentered(x:Float, y:Float, image:Image) {
-        let w = Float(image.width)
-        let h = Float(image.height)
-        var mvp: [GLfloat] = [
-            w * 2.0 / width, 0.0, 0.0, x / width,
-            0.0, h * 2.0 / height, 0.0, y / height,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0,
-        ]
+    func drawImageCentered(x:Float, y:Float, z:Float, image:Image) {
+        let mvp = Mat4()
+        mvp.translate(x - 0.5, y - 0.5, z)
+        let p = Mat4()
+        p.projection()
+        mvp.mult(p)
         glUseProgram(self.program)
-        glUniformMatrix4fv(self.mvp_location, 1, GLboolean(GL_TRUE), &mvp)
+        var glmat4 = mvp.toGL()
+        glUniformMatrix4fv(self.mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
         glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
         glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
         glBindTexture(GLenum(GL_TEXTURE_2D), 0)
