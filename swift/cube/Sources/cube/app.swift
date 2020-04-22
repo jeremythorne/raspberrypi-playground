@@ -29,29 +29,59 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var vertices: [GLfloat] = [
-     0.0, 1.0, 0.0,  0.0, 0.0, 
-     0.0, 0.0, 0.0,  0.0, 1.0, 
-     1.0, 1.0, 0.0,  1.0, 0.0, 
-     1.0, 0.0, 0.0,  1.0, 1.0, 
+     1.0, 1.0, 1.0, 0.0, 0.0, 1.0,  0.0, 0.0, 
+     1.0, 0.0, 1.0, 0.0, 0.0, 1.0,  0.0, 1.0, 
+     0.0, 1.0, 1.0, 0.0, 0.0, 1.0,  0.167, 0.0, 
+     0.0, 0.0, 1.0, 0.0, 0.0, 1.0,  0.167, 1.0, 
+
+     0.0, 1.0, 1.0, -1.0,0.0, 0.0,  0.167, 0.0, 
+     0.0, 0.0, 1.0, -1.0,0.0, 0.0,  0.167, 1.0, 
+     0.0, 1.0, 0.0, -1.0,0.0, 0.0,  0.333, 0.0, 
+     0.0, 0.0, 0.0, -1.0,0.0, 0.0,  0.333, 1.0, 
+
+     0.0, 1.0, 0.0, 0.0, 0.0, -1.0,  0.333, 0.0, 
+     0.0, 0.0, 0.0, 0.0, 0.0, -1.0,  0.333, 1.0, 
+     1.0, 1.0, 0.0, 0.0, 0.0, -1.0,  0.5, 0.0, 
+     1.0, 0.0, 0.0, 0.0, 0.0, -1.0,  0.5, 1.0, 
+
+     1.0, 1.0, 0.0, 1.0,0.0, 0.0,   0.5, 0.0, 
+     1.0, 0.0, 0.0, 1.0,0.0, 0.0,   0.5, 1.0, 
+     1.0, 1.0, 1.0, 1.0,0.0, 0.0,   0.667, 0.0, 
+     1.0, 0.0, 1.0, 1.0,0.0, 0.0,   0.667, 1.0, 
+
+     0.0, 0.0, 0.0, 0.0, -1.0, 0.0,   0.667, 0.0, 
+     0.0, 0.0, 1.0, 0.0, -1.0, 0.0,   0.667, 1.0, 
+     1.0, 0.0, 0.0, 0.0, -1.0, 0.0,   0.833, 0.0, 
+     1.0, 0.0, 1.0, 0.0, -1.0, 0.0,   0.833, 1.0, 
+
+     0.0, 1.0, 1.0, 0.0, 1.0,0.0,   0.833, 0.0, 
+     0.0, 1.0, 0.0, 0.0, 1.0,0.0,   0.833, 1.0, 
+     1.0, 1.0, 1.0, 0.0, 1.0,0.0,   1.0, 0.0, 
+     1.0, 1.0, 0.0, 0.0, 1.0,0.0,   1.0, 1.0, 
 ]
 
 var vertex_shader_text = "#version 110\n"
 + "attribute vec3 pos;\n"
++ "attribute vec3 normal;\n"
 + "attribute vec2 tex_coord;\n"
 + "uniform mat4 mvp;\n"
 + "varying vec2 vtex_coord;\n"
++ "varying vec3 vnormal;\n"
 + "void main()\n"
 + "{\n"
 + "  gl_Position = mvp * vec4(pos, 1.0);\n"
 + "  vtex_coord = tex_coord;\n"
++ "  vnormal = normal;\n"
 + "}\n"
 
 var fragment_shader_text = "#version 110\n"
 + "varying vec2 vtex_coord;\n"
++ "varying vec3 vnormal;\n"
 + "uniform sampler2D image;\n"
 + "void main()\n"
 + "{\n"
-+ "  gl_FragColor = texture2D(image, vtex_coord);\n"
++ "  vec4 tex = texture2D(image, vtex_coord);\n"
++ "  gl_FragColor = vec4(dot(vnormal, vec3(1.0, 1.0, 1.0)) * tex.xyz, tex.w);\n"
 + "}\n"
 
 class Game {
@@ -226,6 +256,7 @@ class App {
         }
 
         let pos_location = GLint(glGetAttribLocation(self.program, "pos"))
+        let normal_location = GLint(glGetAttribLocation(self.program, "normal"))
         let tex_coord_location = GLint(glGetAttribLocation(self.program, "tex_coord"))
         self.mvp_location = GLint(glGetUniformLocation(self.program, "mvp")) 
 
@@ -233,12 +264,17 @@ class App {
 
         glEnableVertexAttribArray(GLuint(pos_location))
         glVertexAttribPointer(GLuint(pos_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 5,
+                                GLsizei(MemoryLayout<GLfloat>.size) * 8,
                                            UnsafeRawPointer(bitPattern: 0))
+        glEnableVertexAttribArray(GLuint(normal_location))
+        glVertexAttribPointer(GLuint(normal_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLfloat>.size) * 8,
+                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 3))
+        
         glEnableVertexAttribArray(GLuint(tex_coord_location))
         glVertexAttribPointer(GLuint(tex_coord_location), 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 5,
-                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 3))
+                                GLsizei(MemoryLayout<GLfloat>.size) * 8,
+                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 6))
         
         var iwidth: Int32 = 0
         var iheight: Int32 = 0
@@ -321,7 +357,7 @@ class App {
         var glmat4 = mvp.toGL()
         glUniformMatrix4fv(self.mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
         glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
-        glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 4)
+        glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 16)
         glBindTexture(GLenum(GL_TEXTURE_2D), 0)
     }
 }
