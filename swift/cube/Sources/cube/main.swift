@@ -4,29 +4,18 @@ var image = Image()
 
 class Ball {
     var gx:Float = 0.0
-    var gy:Float = 0.0
-    var gz:Float = -2.5
-    var vx:Float = Float.random(in: -0.1...0.1)
-    var vy:Float = Float.random(in: -0.1...0.1)
-    var vz:Float = Float.random(in: -0.1...0.1)
+    var gy:Float = -2.0
+    var gz:Float = 0
+    var vy:Float = Float.random(in: -0.05...0.05)
 
     func setup() {
     }
 
     func update() {
-        gx += vx
         gy += vy
-        gz += vz
-        if gx > 1.0 || gx < -1.0 {
-            vx = -vx
-        }
-        if gy > 1.0 || gy < -1.0 {
+        if gy > -1.0 || gy < -3.0 {
             vy = -vy
         }
-        if gz > -1.0 || gz < -5.0 {
-            vz = -vz
-        } 
-
     }
 
     func draw() {
@@ -35,15 +24,18 @@ class Ball {
 }
 
 var balls = [Ball]()
-for _ in 1...10 {
-    balls.append(Ball())
+for z in 0..<16 {
+    for x in -8..<8 {
+        let b = Ball()
+        b.gx = Float(x)
+        b.gz = Float(-16 + z)
+        balls.append(b)
+    }
 }
 
 class MyGame : Game {
 
     override func setup() {
-        image = app.loadImage(filename:"images/hello.png")!
-        print("image read")
         balls.forEach { $0.setup() }
     }
 

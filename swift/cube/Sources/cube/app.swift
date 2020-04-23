@@ -28,36 +28,48 @@ func key_callback(window: Optional<OpaquePointer>,
      }
 }
 
-var vertices: [GLfloat] = [
-     1.0, 1.0, 1.0, 0.0, 0.0, 1.0,  0.0, 0.0, 
-     1.0, 0.0, 1.0, 0.0, 0.0, 1.0,  0.0, 1.0, 
-     0.0, 1.0, 1.0, 0.0, 0.0, 1.0,  0.167, 0.0, 
-     0.0, 0.0, 1.0, 0.0, 0.0, 1.0,  0.167, 1.0, 
+var cube: [[[GLfloat]]] = [
+     [
+     [1.0, 1.0, 1.0, 0.0, 0.0, -1.0,  0.0, 0.0], 
+     [1.0, 0.0, 1.0, 0.0, 0.0, -1.0,  0.0, 1.0], 
+     [0.0, 1.0, 1.0, 0.0, 0.0, -1.0,  0.167, 0.0], 
+     [0.0, 0.0, 1.0, 0.0, 0.0, -1.0,  0.167, 1.0]
+     ], 
 
-     0.0, 1.0, 1.0, -1.0,0.0, 0.0,  0.167, 0.0, 
-     0.0, 0.0, 1.0, -1.0,0.0, 0.0,  0.167, 1.0, 
-     0.0, 1.0, 0.0, -1.0,0.0, 0.0,  0.333, 0.0, 
-     0.0, 0.0, 0.0, -1.0,0.0, 0.0,  0.333, 1.0, 
+     [
+     [0.0, 1.0, 0.0, -1.0,0.0, 0.0,  0.333, 0.0], 
+     [0.0, 0.0, 0.0, -1.0,0.0, 0.0,  0.333, 1.0],
+     [0.0, 1.0, 1.0, -1.0,0.0, 0.0,  0.167, 0.0], 
+     [0.0, 0.0, 1.0, -1.0,0.0, 0.0,  0.167, 1.0], 
+     ], 
 
-     0.0, 1.0, 0.0, 0.0, 0.0, -1.0,  0.333, 0.0, 
-     0.0, 0.0, 0.0, 0.0, 0.0, -1.0,  0.333, 1.0, 
-     1.0, 1.0, 0.0, 0.0, 0.0, -1.0,  0.5, 0.0, 
-     1.0, 0.0, 0.0, 0.0, 0.0, -1.0,  0.5, 1.0, 
+     [
+     [0.0, 1.0, 0.0, 0.0, 0.0, 1.0,  0.333, 0.0], 
+     [0.0, 0.0, 0.0, 0.0, 0.0, 1.0,  0.333, 1.0], 
+     [1.0, 1.0, 0.0, 0.0, 0.0, 1.0,  0.5, 0.0], 
+     [1.0, 0.0, 0.0, 0.0, 0.0, 1.0,  0.5, 1.0]
+     ], 
 
-     1.0, 1.0, 0.0, 1.0,0.0, 0.0,   0.5, 0.0, 
-     1.0, 0.0, 0.0, 1.0,0.0, 0.0,   0.5, 1.0, 
-     1.0, 1.0, 1.0, 1.0,0.0, 0.0,   0.667, 0.0, 
-     1.0, 0.0, 1.0, 1.0,0.0, 0.0,   0.667, 1.0, 
+     [
+     [1.0, 1.0, 1.0, 1.0,0.0, 0.0,   0.667, 0.0], 
+     [1.0, 0.0, 1.0, 1.0,0.0, 0.0,   0.667, 1.0],
+     [1.0, 1.0, 0.0, 1.0,0.0, 0.0,   0.5, 0.0], 
+     [1.0, 0.0, 0.0, 1.0,0.0, 0.0,   0.5, 1.0], 
+     ], 
 
-     0.0, 0.0, 0.0, 0.0, -1.0, 0.0,   0.667, 0.0, 
-     0.0, 0.0, 1.0, 0.0, -1.0, 0.0,   0.667, 1.0, 
-     1.0, 0.0, 0.0, 0.0, -1.0, 0.0,   0.833, 0.0, 
-     1.0, 0.0, 1.0, 0.0, -1.0, 0.0,   0.833, 1.0, 
+     [
+     [0.0, 0.0, 1.0, 0.0, -1.0, 0.0,   0.833, 1.0], 
+     [0.0, 0.0, 0.0, 0.0, -1.0, 0.0,  0.833, 0.0], 
+     [1.0, 0.0, 1.0, 0.0, -1.0, 0.0,   1.0  , 1.0],
+     [1.0, 0.0, 0.0, 0.0, -1.0, 0.0,   1.0  , 0.0], 
+     ], 
 
-     0.0, 1.0, 1.0, 0.0, 1.0,0.0,   0.833, 0.0, 
-     0.0, 1.0, 0.0, 0.0, 1.0,0.0,   0.833, 1.0, 
-     1.0, 1.0, 1.0, 0.0, 1.0,0.0,   1.0, 0.0, 
-     1.0, 1.0, 0.0, 0.0, 1.0,0.0,   1.0, 1.0, 
+     [
+     [0.0, 1.0, 0.0, 0.0, 1.0,0.0,   0.667 , 1.0], 
+     [0.0, 1.0, 1.0, 0.0, 1.0,0.0,  0.667 , 0.0], 
+     [1.0, 1.0, 0.0, 0.0, 1.0,0.0,   0.833 , 1.0], 
+     [1.0, 1.0, 1.0, 0.0, 1.0,0.0,   0.833 , 0.0],
+     ] 
 ]
 
 var vertex_shader_text = "#version 110\n"
@@ -81,7 +93,7 @@ var fragment_shader_text = "#version 110\n"
 + "void main()\n"
 + "{\n"
 + "  vec4 tex = texture2D(image, vtex_coord);\n"
-+ "  gl_FragColor = vec4(dot(vnormal, vec3(1.0, 1.0, 1.0)) * tex.xyz, tex.w);\n"
++ "  gl_FragColor = vec4(dot(vnormal, vec3(0.8, 0.7, 1.0)) * tex.xyz, tex.w);\n"
 + "}\n"
 
 class Game {
@@ -133,15 +145,15 @@ class Mat4 {
         a = c
     }
 
-    func projection() {
-        //depth range 1-5
+    func projection(right:Double, aspect:Double, near:Double, far:Double) {
         for i in 0..<16 {
             a[i] = 0
         }
-        a[0] = 1
-        a[5] = 1
-        a[10] = -6.0/4
-        a[11] = -10.0/4
+        let top = right / aspect
+        a[0] = near / right
+        a[5] = near / top
+        a[10] = -(far + near) / (far - near)
+        a[11] = -2 * far * near / (far - near)
         a[14] = -1
     }
 
@@ -166,8 +178,15 @@ class App {
 
     var width:Float = 0.0
     var height:Float = 0.0
+    let near = 1.0
+    let far = 128.0
     var program:GLuint = 0
+    var pos_location:GLint = 0
+    var normal_location:GLint = 0 
+    var tex_coord_location:GLint = 0
     var mvp_location:GLint = 0 
+    var vertex_buffer: [GLuint] = [0, 0, 0, 0, 0, 0]
+    var vertices:[[GLfloat]] = [[], [], [], [], [], []]
 
     func run(game:Game)
     {
@@ -182,7 +201,9 @@ class App {
         defer {
            glfwTerminate()
         }
-
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2)
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0)
+        glfwWindowHint(GLFW_DEPTH_BITS, 24)
         guard let window = glfwCreateWindow(640, 480, "hello", nil, nil) else {
             print("failed to create window")
             return
@@ -197,19 +218,24 @@ class App {
         glfwSetKeyCallback(window, key_callback)
 
         glfwMakeContextCurrent(window)
+
         if let vendor = glGetString(GLenum(GL_VENDOR)) {
             print("GL vendor:", String(cString: vendor))
         }
+        if let version = glGetString(GLenum(GL_VERSION)) {
+            print("GL version:", String(cString: version))
+        }
+
+        var depth_bits:GLint = 0
+        glGetIntegerv(GLenum(GL_DEPTH_BITS), &depth_bits)
+        print("depth bits:", depth_bits)
 
         glfwSwapInterval(1)
 
-        var vertex_buffer: GLuint = 0
-        glGenBuffers(1, &vertex_buffer)
-        glBindBuffer(GLenum(GL_ARRAY_BUFFER), vertex_buffer)
-        glBufferData(GLenum(GL_ARRAY_BUFFER), GLsizeiptr(MemoryLayout<GLfloat>.size * Int(vertices.count)),
-                                               vertices, GLenum(GL_STATIC_DRAW))
-
-
+        for i in 0..<6 {
+            glGenBuffers(1, &vertex_buffer[i])
+            print("vertex_buffer", vertex_buffer[i])
+       }
 
         func compileShader(text:String, shader_type:GLenum) -> GLuint? {
             let shader = glCreateShader(shader_type)
@@ -255,33 +281,23 @@ class App {
             return
         }
 
-        let pos_location = GLint(glGetAttribLocation(self.program, "pos"))
-        let normal_location = GLint(glGetAttribLocation(self.program, "normal"))
-        let tex_coord_location = GLint(glGetAttribLocation(self.program, "tex_coord"))
-        self.mvp_location = GLint(glGetUniformLocation(self.program, "mvp")) 
+        pos_location = GLint(glGetAttribLocation(self.program, "pos"))
+        normal_location = GLint(glGetAttribLocation(self.program, "normal"))
+        tex_coord_location = GLint(glGetAttribLocation(self.program, "tex_coord"))
+        mvp_location = GLint(glGetUniformLocation(self.program, "mvp")) 
 
         print("program attribute locations", pos_location,tex_coord_location)
 
-        glEnableVertexAttribArray(GLuint(pos_location))
-        glVertexAttribPointer(GLuint(pos_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 8,
-                                           UnsafeRawPointer(bitPattern: 0))
-        glEnableVertexAttribArray(GLuint(normal_location))
-        glVertexAttribPointer(GLuint(normal_location), 3, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 8,
-                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 3))
-        
-        glEnableVertexAttribArray(GLuint(tex_coord_location))
-        glVertexAttribPointer(GLuint(tex_coord_location), 2, GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size) * 8,
-                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * 6))
+
         
         var iwidth: Int32 = 0
         var iheight: Int32 = 0
         glfwGetFramebufferSize(window, &iwidth, &iheight)
         glViewport(0, 0, iwidth, iheight)
-        glDepthRange(1, 5)
+        glDepthRange(near, far)
         //glEnable(GLenum(GL_DEPTH_TEST))
+        glCullFace(GLenum(GL_BACK))
+        //glEnable(GLenum(GL_CULL_FACE))
         self.width = Float(iwidth)
         self.height = Float(iheight)
         glClearColor(0.8, 0.8, 1.0, 1.0)
@@ -290,14 +306,19 @@ class App {
 
         print("GL error:", glGetError())
 
+        let image = app.loadImage(filename:"images/hello.png")!
+        glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
+        
         game.setup()
 
         func update() {
+            vertices = [[], [], [], [], [], []]
             game.update()
         }
 
         func draw() {
             game.draw()
+            drawCubes(x:0, y:0, z:-3)
         }
 
         print("starting loop")
@@ -305,9 +326,14 @@ class App {
         while glfwWindowShouldClose(window) == 0 {
             update()
         
-            glClear(GLbitfield(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT))
+            glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
         
             draw()
+            
+            let err = glGetError()
+            if err != 0 {
+                print("GL error:", err)
+            }
 
             glfwSwapBuffers(window)
             glfwPollEvents()
@@ -348,17 +374,46 @@ class App {
     }
 
     func drawImageCentered(x:Float, y:Float, z:Float, image:Image) {
+        for i in 0..<6 {
+            var verts = [[GLfloat]]()
+            for j in 0..<4 {
+                let v = cube[i][j]
+                verts.append([GLfloat(v[0] + x), GLfloat(v[1] + y), GLfloat(v[2] + z), v[3], v[4], v[5], v[6], v[7]])
+            }
+
+            for j in [0, 1, 2, 2, 1, 3] {
+                vertices[i] += verts[j]
+            }
+        }
+    }
+
+    func enableAttrib(loc:GLint, num:Int, off:Int, stride:Int) {
+        glEnableVertexAttribArray(GLuint(loc))
+        glVertexAttribPointer(GLuint(loc), GLint(num), GLenum(GL_FLOAT), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLfloat>.size * stride),
+                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * off))
+    }
+
+    func drawCubes(x:Float, y:Float, z:Float) {
         let mvp = Mat4()
         mvp.translate(x - 0.5, y - 0.5, z)
         let p = Mat4()
-        p.projection()
+        p.projection(right:1, aspect:Double(width / height), near:near, far:far)
         mvp.mult(p)
         glUseProgram(self.program)
         var glmat4 = mvp.toGL()
         glUniformMatrix4fv(self.mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
-        glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
-        glDrawArrays(GLenum(GL_TRIANGLE_STRIP), 0, 16)
-        glBindTexture(GLenum(GL_TEXTURE_2D), 0)
+        for i in 0..<6 {
+            glBindBuffer(GLenum(GL_ARRAY_BUFFER), vertex_buffer[i])
+            glBufferData(GLenum(GL_ARRAY_BUFFER),
+                         GLsizeiptr(MemoryLayout<GLfloat>.size * Int(vertices[i].count)),
+                                               vertices[i], GLenum(GL_STATIC_DRAW))
+            enableAttrib(loc:pos_location, num:3, off:0, stride:8)
+            enableAttrib(loc:normal_location, num:3, off:3, stride:8)
+            enableAttrib(loc:tex_coord_location, num:2, off:6, stride:8)
+            
+            glDrawArrays(GLenum(GL_TRIANGLES), 0, GLsizei(vertices[i].count))
+        }
     }
 }
 
