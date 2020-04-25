@@ -310,23 +310,9 @@ class App {
         let image = app.loadImage(filename:"images/hello.png")!
         glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
         
+        makeWorld()
+
         game_o?.setup()
-
-        for i in 0..<6 {
-            glGenBuffers(1, &vertex_buffer[i])
-            print("vertex_buffer", vertex_buffer[i])
-        }
-
-        print("A GLbyte is \(MemoryLayout<GLbyte>.size) bytes") 
-
-        vertices = [[], [], [], [], [], []]
-        for z in -16..<16 {
-            print(z)
-            for x in -16..<16 {
-                addCube(x:x, y:Int.random(in:(-4)...(-1)), z:z)
-            }
-        }
-        uploadCubes()
 
         let err = glGetError()
         if err != 0 {
@@ -334,6 +320,47 @@ class App {
             return false
         }
         return true
+    }
+
+    func makeWorld()
+    {
+        var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: 10), count:32), count:32)
+
+        for z in 0..<32 {
+            for x in 0..<32 {
+                let h = Int.random(in:1..<8)
+                for y in 0..<10 {
+                    world[z][x][y] = y < h ? 1 : 0
+                }
+            }
+        }
+
+        vertices = [[], [], [], [], [], []]
+        for z in 0..<32 {
+            for x in 0..<32 {
+                for y in 0..<10 {
+                    if world[z][x][y] != 0 {
+                        if x == 0 || x == 31 || z == 0 || z == 31 || y == 0 || y == 9 ||
+                               world[z - 1][x][y] == 0 ||
+                               world[z + 1][x][y] == 0 ||
+                               world[z][x - 1][y] == 0 ||
+                               world[z][x + 1][y] == 0 ||
+                               world[z][x][y - 1] == 0 ||
+                               world[z][x][y + 1] == 0 {
+                                   // not completely occluded
+                                addCube(x:x, y:y, z:z)
+                        }
+                    }
+                }
+            }
+        }
+
+        for i in 0..<6 {
+            glGenBuffers(1, &vertex_buffer[i])
+            print("vertex_buffer", vertex_buffer[i])
+        }
+
+        uploadCubes()
     }
 
     func loop()
@@ -351,7 +378,7 @@ class App {
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
             game_o?.draw()
             rad += 0.1
-            drawCubes(rotate:rad, x:0, y:0, z:0)
+            drawCubes(rotate:rad, x:-16, y:-10, z:-16)
         }
 
         print("starting loop")
@@ -461,11 +488,15 @@ class App {
 
     func drawCubes(rotate:Double, x:Double, y:Double, z:Double)
     {
-        let mvp = Mat4()
-        mvp.rotatey(rad:rotate)
-        mvp.translate(x - 0.5, y - 0.5, z)
+        let m1 = Mat4()
+        m1.translate(x - 0.5, y - 0.5, z)
+        let m2 = Mat4()
+        m2.rotatey(rad:rotate)
         let p = Mat4()
         p.projection(right:near, aspect:Double(width / height), near:near, far:far)
+        let mvp = Mat4()
+        mvp.mult(m1)
+        mvp.mult(m2)
         mvp.mult(p)
         glUseProgram(program)
         var glmat4 = mvp.toGL()
