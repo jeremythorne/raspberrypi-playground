@@ -4,6 +4,8 @@
 // github.com/sakrist/Swift_OpenGL_Example - iOS, Linux, Android OpenGL is Swift 
 // pygame-zero.readthedocs.io - simple python game framework
 // gist.github.com/niw/5963798 - libpng code
+// https://www.songho.ca/opengl/gl_projectionmatrix.html
+// https://gamedev.stackexchange.com/questions/17171/for-voxel-rendering-what-is-more-efficient-pre-made-vbo-or-a-geometry-shader
 #if os(OSX)
   import OpenGL
 #else
@@ -28,72 +30,81 @@ func key_callback(window: Optional<OpaquePointer>,
      }
 }
 
-var cube: [[[GLfloat]]] = [
+var cube: [[[GLbyte]]] = [
      [
-     [1.0, 1.0, 1.0, 0.0, 0.0, 1.0,  0.0, 0.0], 
-     [1.0, 0.0, 1.0, 0.0, 0.0, 1.0,  0.0, 1.0], 
-     [0.0, 1.0, 1.0, 0.0, 0.0, 1.0,  0.167, 0.0], 
-     [0.0, 0.0, 1.0, 0.0, 0.0, 1.0,  0.167, 1.0]
+     [1, 1, 1,  0, 0], 
+     [1, 0, 1,  0, 1], 
+     [0, 1, 1,  1, 0], 
+     [0, 0, 1,  1, 1]
      ], 
 
      [
-     [0.0, 1.0, 0.0, -1.0,0.0, 0.0,  0.333, 0.0], 
-     [0.0, 0.0, 0.0, -1.0,0.0, 0.0,  0.333, 1.0],
-     [0.0, 1.0, 1.0, -1.0,0.0, 0.0,  0.167, 0.0], 
-     [0.0, 0.0, 1.0, -1.0,0.0, 0.0,  0.167, 1.0], 
+     [0, 1, 0,  2, 0], 
+     [0, 0, 0,  2, 1],
+     [0, 1, 1,  1, 0], 
+     [0, 0, 1,  1, 1], 
      ], 
 
      [
-     [0.0, 1.0, 0.0, 0.0, 0.0, -1.0,  0.333, 0.0], 
-     [0.0, 0.0, 0.0, 0.0, 0.0, -1.0,  0.333, 1.0], 
-     [1.0, 1.0, 0.0, 0.0, 0.0, -1.0,  0.5, 0.0], 
-     [1.0, 0.0, 0.0, 0.0, 0.0, -1.0,  0.5, 1.0]
+     [0, 1, 0,   2, 0], 
+     [0, 0, 0,   2, 1], 
+     [1, 1, 0,   3, 0], 
+     [1, 0, 0,   3, 1]
      ], 
 
      [
-     [1.0, 1.0, 1.0, 1.0,0.0, 0.0,   0.667, 0.0], 
-     [1.0, 0.0, 1.0, 1.0,0.0, 0.0,   0.667, 1.0],
-     [1.0, 1.0, 0.0, 1.0,0.0, 0.0,   0.5, 0.0], 
-     [1.0, 0.0, 0.0, 1.0,0.0, 0.0,   0.5, 1.0], 
+     [1, 1, 1,  4, 0], 
+     [1, 0, 1,  4, 1],
+     [1, 1, 0,  3, 0], 
+     [1, 0, 0,  3, 1], 
      ], 
 
      [
-     [0.0, 0.0, 1.0, 0.0, -1.0, 0.0,   0.833, 1.0], 
-     [0.0, 0.0, 0.0, 0.0, -1.0, 0.0,  0.833, 0.0], 
-     [1.0, 0.0, 1.0, 0.0, -1.0, 0.0,   1.0  , 1.0],
-     [1.0, 0.0, 0.0, 0.0, -1.0, 0.0,   1.0  , 0.0], 
+     [0, 0, 1,  5, 1], 
+     [0, 0, 0,  5, 0], 
+     [1, 0, 1,  1, 1],
+     [1, 0, 0,  1, 0], 
      ], 
 
      [
-     [0.0, 1.0, 0.0, 0.0, 1.0,0.0,   0.667 , 1.0], 
-     [0.0, 1.0, 1.0, 0.0, 1.0,0.0,  0.667 , 0.0], 
-     [1.0, 1.0, 0.0, 0.0, 1.0,0.0,   0.833 , 1.0], 
-     [1.0, 1.0, 1.0, 0.0, 1.0,0.0,   0.833 , 0.0],
-     ] 
+     [0, 1, 0,  4, 1], 
+     [0, 1, 1,  4, 0], 
+     [1, 1, 0,  5, 1], 
+     [1, 1, 1,  5, 0],
+     ]
+]
+
+var normals: [[GLfloat]] = [
+     [ 0,  0,  1], 
+     [-1,  0,  0], 
+     [ 0,  0, -1], 
+     [ 1,  0,  0], 
+     [0,  -1,  0], 
+     [0,   1,  0], 
 ]
 
 var vertex_shader_text = "#version 110\n"
 + "attribute vec3 pos;\n"
-+ "attribute vec3 normal;\n"
 + "attribute vec2 tex_coord;\n"
++ "uniform vec3 normal;\n"
 + "uniform mat4 mvp;\n"
 + "varying vec2 vtex_coord;\n"
-+ "varying vec3 vnormal;\n"
++ "varying float vsky;\n"
 + "void main()\n"
 + "{\n"
 + "  gl_Position = mvp * vec4(pos, 1.0);\n"
-+ "  vtex_coord = tex_coord;\n"
-+ "  vnormal = normal;\n"
++ "  vtex_coord = tex_coord / vec2(6.0, 1.0);\n"
++ "  vsky = dot(normal, vec3(0.8, 0.7, 1.0));\n"
 + "}\n"
 
 var fragment_shader_text = "#version 110\n"
 + "varying vec2 vtex_coord;\n"
-+ "varying vec3 vnormal;\n"
++ "varying float vsky;\n"
 + "uniform sampler2D image;\n"
 + "void main()\n"
 + "{\n"
 + "  vec4 tex = texture2D(image, vtex_coord);\n"
-+ "  gl_FragColor = vec4(dot(vnormal, vec3(0.8, 0.7, 1.0)) * tex.xyz, tex.w);\n"
++ "  gl_FragColor = vec4(vsky * tex.xyz, tex.w);\n"
 + "}\n"
 
 class Game {
@@ -157,10 +168,17 @@ class Mat4 {
         a[14] = -1
     }
 
-    func translate(_ x:Float, _ y:Float, _ z:Float) {
-        a[12] += Double(x)
-        a[13] += Double(y)
-        a[14] += Double(z)
+    func translate(_ x:Double, _ y:Double, _ z:Double) {
+        a[12] = x
+        a[13] = y
+        a[14] = z
+    }
+
+    func rotatey(rad:Double) {
+        a[0] = sin(rad)
+        a[2] = cos(rad)
+        a[8] = -cos(rad)
+        a[10] = sin(rad)
     }
 
     func toGL() -> [GLfloat] {
@@ -179,38 +197,51 @@ class App {
     var width:Float = 0.0
     var height:Float = 0.0
     let near = 1.0
-    let far = 128.0
+    let far = 32.0
     var program:GLuint = 0
     var pos_location:GLint = 0
     var normal_location:GLint = 0 
     var tex_coord_location:GLint = 0
     var mvp_location:GLint = 0 
     var vertex_buffer: [GLuint] = [0, 0, 0, 0, 0, 0]
-    var vertices:[[GLfloat]] = [[], [], [], [], [], []]
+    var vertices:[[GLbyte]] = [[], [], [], [], [], []]
+    var window_o:OpaquePointer?
+    var game_o:Game? = nil
+
+    deinit
+    {
+        if let window = window_o {
+            glfwDestroyWindow(window)
+        }
+        glfwTerminate()
+    }
 
     func run(game:Game)
     {
+        game_o = game
+        if !setup() {
+            return
+        }
 
+        loop()
+    }
+
+    func setup() -> Bool
+    {
         glfwSetErrorCallback(error_callback)
 
         if 0 == glfwInit() {
             print("glfwInit failed")
-            return
+            return false
         }
 
-        defer {
-           glfwTerminate()
-        }
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2)
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0)
         glfwWindowHint(GLFW_DEPTH_BITS, 24)
-        guard let window = glfwCreateWindow(640, 480, "hello", nil, nil) else {
+        window_o = glfwCreateWindow(640, 480, "hello", nil, nil)
+        guard let window = window_o else {
             print("failed to create window")
-            return
-        }
-
-        defer {
-            glfwDestroyWindow(window)
+            return false
         }
 
         print("window pointer:", window)
@@ -232,64 +263,36 @@ class App {
 
         glfwSwapInterval(1)
 
-        for i in 0..<6 {
-            glGenBuffers(1, &vertex_buffer[i])
-            print("vertex_buffer", vertex_buffer[i])
-       }
-
-        func compileShader(text:String, shader_type:GLenum) -> GLuint? {
-            let shader = glCreateShader(shader_type)
-            text.withCString {cs in
-                var cs_opt = Optional(cs)
-                glShaderSource(shader, 1, &cs_opt, nil)
-            }
-            glCompileShader(shader)
-            var compile_status:GLint = 0
-            glGetShaderiv(shader, GLenum(GL_COMPILE_STATUS), &compile_status)
-            if compile_status != GLboolean(GL_TRUE) {
-                print("shader compile failed")
-                var buffer = [Int8]()
-                buffer.reserveCapacity(256)
-                var length: GLsizei = 0
-                glGetShaderInfoLog(shader, 256, &length, &buffer)
-                print(String(cString: buffer))
-                return nil
-            }
-            return shader
-        }
-
         guard let vertex_shader = 
             compileShader(text: vertex_shader_text,
                           shader_type:GLenum(GL_VERTEX_SHADER)) else {
-                return
+                return false
         }
 
         guard let fragment_shader = 
             compileShader(text: fragment_shader_text,
                           shader_type:GLenum(GL_FRAGMENT_SHADER)) else {
-                return
+                return false
         }
 
-        self.program = glCreateProgram()
-        glAttachShader(self.program, vertex_shader)
-        glAttachShader(self.program, fragment_shader)
-        glLinkProgram(self.program)
+        program = glCreateProgram()
+        glAttachShader(program, vertex_shader)
+        glAttachShader(program, fragment_shader)
+        glLinkProgram(program)
         var link_status:GLint = 0
-        glGetProgramiv(self.program, GLenum(GL_LINK_STATUS), &link_status)
+        glGetProgramiv(program, GLenum(GL_LINK_STATUS), &link_status)
         if link_status != GLboolean(GL_TRUE) {
             print("failed to link GL program")
-            return
+            return false
         }
 
-        pos_location = GLint(glGetAttribLocation(self.program, "pos"))
-        normal_location = GLint(glGetAttribLocation(self.program, "normal"))
-        tex_coord_location = GLint(glGetAttribLocation(self.program, "tex_coord"))
-        mvp_location = GLint(glGetUniformLocation(self.program, "mvp")) 
+        pos_location = GLint(glGetAttribLocation(program, "pos"))
+        tex_coord_location = GLint(glGetAttribLocation(program, "tex_coord"))
+        normal_location = GLint(glGetUniformLocation(program, "normal"))
+        mvp_location = GLint(glGetUniformLocation(program, "mvp")) 
 
         print("program attribute locations", pos_location,tex_coord_location)
 
-
-        
         var iwidth: Int32 = 0
         var iheight: Int32 = 0
         glfwGetFramebufferSize(window, &iwidth, &iheight)
@@ -303,29 +306,62 @@ class App {
         glEnable(GLenum(GL_BLEND))
         glBlendFunc(GLenum(GL_SRC_ALPHA), GLenum(GL_ONE_MINUS_SRC_ALPHA))
 
-        print("GL error:", glGetError())
 
         let image = app.loadImage(filename:"images/hello.png")!
         glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
         
-        game.setup()
+        game_o?.setup()
 
-        func update() {
-            vertices = [[], [], [], [], [], []]
-            game.update()
+        for i in 0..<6 {
+            glGenBuffers(1, &vertex_buffer[i])
+            print("vertex_buffer", vertex_buffer[i])
         }
 
-        func draw() {
-            game.draw()
-            drawCubes(x:0, y:0, z:-3)
+        print("A GLbyte is \(MemoryLayout<GLbyte>.size) bytes") 
+
+        vertices = [[], [], [], [], [], []]
+        for z in -16..<16 {
+            print(z)
+            for x in -16..<16 {
+                addCube(x:x, y:Int.random(in:(-4)...(-1)), z:z)
+            }
+        }
+        uploadCubes()
+
+        let err = glGetError()
+        if err != 0 {
+            print("GL error:", err)
+            return false
+        }
+        return true
+    }
+
+    func loop()
+    {
+        print("go")
+
+        func update()
+        {
+            game_o?.update()
+        }
+
+        var rad = 0.0
+        func draw()
+        {
+            glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
+            game_o?.draw()
+            rad += 0.1
+            drawCubes(rotate:rad, x:0, y:0, z:0)
         }
 
         print("starting loop")
 
+        guard let window = window_o else {
+            return
+        }
+
         while glfwWindowShouldClose(window) == 0 {
             update()
-        
-            glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
         
             draw()
             
@@ -340,6 +376,27 @@ class App {
         print("finished loop")
     }
 
+    func compileShader(text:String, shader_type:GLenum) -> GLuint? {
+        let shader = glCreateShader(shader_type)
+        text.withCString {cs in
+            var cs_opt = Optional(cs)
+            glShaderSource(shader, 1, &cs_opt, nil)
+        }
+        glCompileShader(shader)
+        var compile_status:GLint = 0
+        glGetShaderiv(shader, GLenum(GL_COMPILE_STATUS), &compile_status)
+        if compile_status != GLboolean(GL_TRUE) {
+            print("shader compile failed")
+            var buffer = [Int8]()
+            buffer.reserveCapacity(256)
+            var length: GLsizei = 0
+            glGetShaderInfoLog(shader, 256, &length, &buffer)
+            print(String(cString: buffer))
+            return nil
+        }
+        return shader
+    }
+
     func loadTexture(width:Int, height:Int, bytes: inout [UInt8]) -> GLuint {
         print("loading texture")
         var texture:GLuint = 0
@@ -350,10 +407,6 @@ class App {
         glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MIN_FILTER), GL_NEAREST)
         glTexParameteri(GLenum(GL_TEXTURE_2D), GLenum(GL_TEXTURE_MAG_FILTER), GL_NEAREST)
 
-        //var bytes: [UInt8] = [
-        //       0, 0, 0, 0xff,  0xff, 0xff, 0xff, 0xff,
-        //    0xff, 0, 0, 0xff,     0, 0xff,    0, 0xff
-        //]
         glTexImage2D(GLenum(GL_TEXTURE_2D), 0, GL_RGBA,
                      Int32(width), Int32(height), 0, GLenum(GL_RGBA), GLenum(GL_UNSIGNED_BYTE),
                      &bytes)
@@ -361,7 +414,8 @@ class App {
         return texture
     }
 
-    func loadImage(filename:String) -> Image? {
+    func loadImage(filename:String) -> Image?
+    {
         guard let png = try? PNG(filename:filename) else {
             return nil
         }
@@ -372,12 +426,13 @@ class App {
         return image
     }
 
-    func drawImageCentered(x:Float, y:Float, z:Float, image:Image) {
+    func addCube(x:Int, y:Int, z:Int)
+    {
         for i in 0..<6 {
-            var verts = [[GLfloat]]()
+            var verts = [[GLbyte]]()
             for j in 0..<4 {
                 let v = cube[i][j]
-                verts.append([GLfloat(v[0] + x), GLfloat(v[1] + y), GLfloat(v[2] + z), v[3], v[4], v[5], v[6], v[7]])
+                verts.append([v[0] + GLbyte(x), v[1] + GLbyte(y), v[2] + GLbyte(z), v[3], v[4]])
             }
 
             for j in [0, 1, 2, 2, 1, 3] {
@@ -386,30 +441,40 @@ class App {
         }
     }
 
-    func enableAttrib(loc:GLint, num:Int, off:Int, stride:Int) {
+    func enableAttrib(loc:GLint, num:Int, off:Int, stride:Int)
+    {
         glEnableVertexAttribArray(GLuint(loc))
-        glVertexAttribPointer(GLuint(loc), GLint(num), GLenum(GL_FLOAT), GLboolean(GL_FALSE),
-                                GLsizei(MemoryLayout<GLfloat>.size * stride),
-                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLfloat>.size * off))
+        glVertexAttribPointer(GLuint(loc), GLint(num), GLenum(GL_BYTE), GLboolean(GL_FALSE),
+                                GLsizei(MemoryLayout<GLbyte>.size * stride),
+                                           UnsafeRawPointer(bitPattern: MemoryLayout<GLbyte>.size * off))
     }
 
-    func drawCubes(x:Float, y:Float, z:Float) {
-        let mvp = Mat4()
-        mvp.translate(x - 0.5, y - 0.5, z)
-        let p = Mat4()
-        p.projection(right:1, aspect:Double(width / height), near:near, far:far)
-        mvp.mult(p)
-        glUseProgram(self.program)
-        var glmat4 = mvp.toGL()
-        glUniformMatrix4fv(self.mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
+    func uploadCubes()
+    {
         for i in 0..<6 {
             glBindBuffer(GLenum(GL_ARRAY_BUFFER), vertex_buffer[i])
             glBufferData(GLenum(GL_ARRAY_BUFFER),
-                         GLsizeiptr(MemoryLayout<GLfloat>.size * Int(vertices[i].count)),
+                         GLsizeiptr(MemoryLayout<GLbyte>.size * Int(vertices[i].count)),
                                                vertices[i], GLenum(GL_STATIC_DRAW))
-            enableAttrib(loc:pos_location, num:3, off:0, stride:8)
-            enableAttrib(loc:normal_location, num:3, off:3, stride:8)
-            enableAttrib(loc:tex_coord_location, num:2, off:6, stride:8)
+        }
+    }
+
+    func drawCubes(rotate:Double, x:Double, y:Double, z:Double)
+    {
+        let mvp = Mat4()
+        mvp.rotatey(rad:rotate)
+        mvp.translate(x - 0.5, y - 0.5, z)
+        let p = Mat4()
+        p.projection(right:near, aspect:Double(width / height), near:near, far:far)
+        mvp.mult(p)
+        glUseProgram(program)
+        var glmat4 = mvp.toGL()
+        glUniformMatrix4fv(mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
+        for i in 0..<6 {
+            glUniform3fv(normal_location, 1, normals[i])
+            glBindBuffer(GLenum(GL_ARRAY_BUFFER), vertex_buffer[i])
+            enableAttrib(loc:pos_location, num:3, off:0, stride:5)
+            enableAttrib(loc:tex_coord_location, num:2, off:3, stride:5)
             
             glDrawArrays(GLenum(GL_TRIANGLES), 0, GLsizei(vertices[i].count))
         }
