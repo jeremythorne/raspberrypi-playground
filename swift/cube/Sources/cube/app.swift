@@ -94,7 +94,7 @@ var vertex_shader_text = "#version 110\n"
 + "void main()\n"
 + "{\n"
 + "  gl_Position = mvp * vec4(pos, 1.0);\n"
-+ "  vtex_coord = tex_coord / vec2(6.0, 1.0);\n"
++ "  vtex_coord = tex_coord / vec2(6.0, 2.0);\n"
 + "  vsky = dot(normal, vec3(0.8, 0.7, 1.0));\n"
 + "}\n"
 
@@ -198,7 +198,7 @@ class App {
     var width:Float = 0.0
     var height:Float = 0.0
     let near = 1.0
-    let far = 32.0
+    let far = 16.0
     var program:GLuint = 0
     var pos_location:GLint = 0
     var normal_location:GLint = 0 
@@ -326,34 +326,51 @@ class App {
     {
         var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: 10), count:32), count:32)
 
-        for z in 0..<32 {
-            for x in 0..<32 {
-                let h = Int.random(in:1..<8)
+        for z in 2..<30 {
+            for x in 2..<30 {
+                let h = Int.random(in:1..<6)
                 for y in 0..<10 {
-                    world[z][x][y] = y < h ? 1 : 0
+                    let t:Int
+                    switch y {
+                    case 0..<h:
+                        t = 2
+                    case h:
+                        t = 1
+                    default:
+                        t = 0
+                    }
+                    world[z][x][y] = t
                 }
             }
         }
 
+        func occluded(_ x:Int, _ y:Int, _ z:Int) -> Bool {
+            if x == 0 || x == 31 || z == 0 || z == 31 || y == 0 || y == 9 ||
+                   world[z - 1][x][y] == 0 ||
+                   world[z + 1][x][y] == 0 ||
+                   world[z][x - 1][y] == 0 ||
+                   world[z][x + 1][y] == 0 ||
+                   world[z][x][y - 1] == 0 ||
+                   world[z][x][y + 1] == 0 {
+                       // not completely occluded
+                       return false
+            }
+            return true
+        }
+
         vertices = [[], [], [], [], [], []]
+        var count = 0
         for z in 0..<32 {
             for x in 0..<32 {
                 for y in 0..<10 {
-                    if world[z][x][y] != 0 {
-                        if x == 0 || x == 31 || z == 0 || z == 31 || y == 0 || y == 9 ||
-                               world[z - 1][x][y] == 0 ||
-                               world[z + 1][x][y] == 0 ||
-                               world[z][x - 1][y] == 0 ||
-                               world[z][x + 1][y] == 0 ||
-                               world[z][x][y - 1] == 0 ||
-                               world[z][x][y + 1] == 0 {
-                                   // not completely occluded
-                                addCube(x:x, y:y, z:z)
-                        }
+                    if world[z][x][y] != 0 && !occluded(x, y, z) {
+                        addCube(x:x, y:y, z:z, type:world[z][x][y])
+                        count += 1
                     }
                 }
             }
         }
+        print("\(count) visible cubes")
 
         for i in 0..<6 {
             glGenBuffers(1, &vertex_buffer[i])
@@ -453,13 +470,14 @@ class App {
         return image
     }
 
-    func addCube(x:Int, y:Int, z:Int)
+    func addCube(x:Int, y:Int, z:Int, type:Int)
     {
+        let tv = GLbyte(type - 1)
         for i in 0..<6 {
             var verts = [[GLbyte]]()
             for j in 0..<4 {
                 let v = cube[i][j]
-                verts.append([v[0] + GLbyte(x), v[1] + GLbyte(y), v[2] + GLbyte(z), v[3], v[4]])
+                verts.append([v[0] + GLbyte(x), v[1] + GLbyte(y), v[2] + GLbyte(z), v[3], v[4] + tv])
             }
 
             for j in [0, 1, 2, 0, 2, 3] {
