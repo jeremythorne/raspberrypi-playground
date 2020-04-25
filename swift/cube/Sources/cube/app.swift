@@ -7,6 +7,8 @@
 // https://www.songho.ca/opengl/gl_projectionmatrix.html
 // https://gamedev.stackexchange.com/questions/17171/for-voxel-rendering-what-is-more-efficient-pre-made-vbo-or-a-geometry-shader
 // https://stackoverflow.com/questions/8142388/in-what-order-should-i-send-my-vertices-to-opengl-for-culling
+// https://web.mit.edu/cesium/Public/terrain.pdf - terrain generation
+
 #if os(OSX)
   import OpenGL
 #else
@@ -95,7 +97,7 @@ var vertex_shader_text = "#version 110\n"
 + "{\n"
 + "  gl_Position = mvp * vec4(pos, 1.0);\n"
 + "  vtex_coord = tex_coord / vec2(6.0, 2.0);\n"
-+ "  vsky = dot(normal, vec3(0.8, 0.7, 1.0));\n"
++ "  vsky = max(0.0, dot(normal, vec3(0.8, 0.7, 1.0)));\n"
 + "}\n"
 
 var fragment_shader_text = "#version 110\n"
@@ -105,7 +107,8 @@ var fragment_shader_text = "#version 110\n"
 + "void main()\n"
 + "{\n"
 + "  vec4 tex = texture2D(image, vtex_coord);\n"
-+ "  gl_FragColor = vec4(vsky * tex.xyz, tex.w);\n"
++ "  vec3 ambient = vec3(0.2, 0.2, 0.2);\n"
++ "  gl_FragColor = vec4((ambient + vsky) * tex.xyz, tex.w);\n"
 + "}\n"
 
 class Game {
@@ -197,8 +200,11 @@ class App {
 
     var width:Float = 0.0
     var height:Float = 0.0
+    let worldWidth = 65
+    let worldHeight = 16
+    let worldDepth = 65
     let near = 1.0
-    let far = 16.0
+    let far = 32.0
     var program:GLuint = 0
     var pos_location:GLint = 0
     var normal_location:GLint = 0 
@@ -310,7 +316,7 @@ class App {
         let image = app.loadImage(filename:"images/hello.png")!
         glBindTexture(GLenum(GL_TEXTURE_2D), image.texture)
         
-        makeWorld()
+        makeWorld(width:worldWidth, depth:worldDepth, height:worldHeight)
 
         game_o?.setup()
 
@@ -322,14 +328,52 @@ class App {
         return true
     }
 
-    func makeWorld()
+    func heightMap(width:Int, depth:Int, height:Int) -> [[Int]]
     {
-        var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: 10), count:32), count:32)
+        var h = [[Int]](repeating:[Int](repeating:0, count: depth), count: width)
+        func diamondSquare(t:Int, l:Int, b:Int, r:Int, n:Int)
+        {
+            let mx = (l + r) / 2
+            let my = (t + b) / 2
+            let n2 = n / 2
+            if mx <= l || mx >= r || my <= t || my >= b {
+                return
+            }
+            h[mx][my] = max(1, min(height, (h[l][t] + h[l][b] + h[r][t] + h[r][b]) / 4 + Int.random(in:-n2...n2)))
+            h[mx][t] = max(1, min(height, (h[l][t] + h[r][t]) / 2 + Int.random(in:-n2...n2)))
+            h[mx][b] = max(1, min(height, (h[l][b] + h[r][b]) / 2 + Int.random(in:-n2...n2))) 
+            h[l][my] = max(1, min(height, (h[l][t] + h[l][b]) / 2 + Int.random(in:-n2...n2)))
+            h[r][my] = max(1, min(height, (h[r][t] + h[r][b]) / 2 + Int.random(in:-n2...n2)))
+            diamondSquare(t:t, l:l, b:my, r:mx, n:n2)
+            diamondSquare(t:t, l:mx, b:my, r:r, n:n2)
+            diamondSquare(t:my, l:l, b:b, r:mx, n:n2)
+            diamondSquare(t:my, l:mx, b:b, r:r, n:n2)
+        }
 
-        for z in 2..<30 {
-            for x in 2..<30 {
-                let h = Int.random(in:1..<6)
-                for y in 0..<10 {
+        let t = 0
+        let l = 0
+        let b = depth - 1
+        let r = width - 1
+        let n = height
+        h[l][t] = Int.random(in:1...n) 
+        h[l][b] = Int.random(in:1...n) 
+        h[r][t] = Int.random(in:1...n) 
+        h[r][b] = Int.random(in:1...n) 
+        diamondSquare(t:t, l:l, b:b, r:r, n:n/2)
+        return h
+    }
+
+    func makeWorld(width:Int, depth:Int, height:Int)
+    {
+        
+        var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: height), count:width), count:depth)
+
+        let map = heightMap(width:width, depth:depth, height:height)
+
+        for z in 0..<depth {
+            for x in 0..<width {
+                let h = map[x][z]
+                for y in 0..<height {
                     let t:Int
                     switch y {
                     case 0..<h:
@@ -345,7 +389,7 @@ class App {
         }
 
         func occluded(_ x:Int, _ y:Int, _ z:Int) -> Bool {
-            if x == 0 || x == 31 || z == 0 || z == 31 || y == 0 || y == 9 ||
+            if x == 0 || x == (width - 1) || z == 0 || z == (depth - 1) || y == 0 || y == (height - 1) ||
                    world[z - 1][x][y] == 0 ||
                    world[z + 1][x][y] == 0 ||
                    world[z][x - 1][y] == 0 ||
@@ -360,9 +404,9 @@ class App {
 
         vertices = [[], [], [], [], [], []]
         var count = 0
-        for z in 0..<32 {
-            for x in 0..<32 {
-                for y in 0..<10 {
+        for z in 0..<depth {
+            for x in 0..<width {
+                for y in 0..<height {
                     if world[z][x][y] != 0 && !occluded(x, y, z) {
                         addCube(x:x, y:y, z:z, type:world[z][x][y])
                         count += 1
@@ -394,8 +438,8 @@ class App {
         {
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
             game_o?.draw()
-            rad += 0.1
-            drawCubes(rotate:rad, x:-16, y:-10, z:-16)
+            rad += 0.01
+            drawCubes(rotate:rad, x:Double(-worldWidth) / 2, y:Double(-worldHeight), z:Double(-worldDepth) / 2)
         }
 
         print("starting loop")
@@ -507,14 +551,17 @@ class App {
     func drawCubes(rotate:Double, x:Double, y:Double, z:Double)
     {
         let m1 = Mat4()
-        m1.translate(x - 0.5, y - 0.5, z)
+        m1.translate(x, y, z)
         let m2 = Mat4()
         m2.rotatey(rad:rotate)
+        m1.mult(m2)
+        let m3 = Mat4()
+        m3.translate(0, 0, -20)
+        m1.mult(m3)
         let p = Mat4()
-        p.projection(right:near, aspect:Double(width / height), near:near, far:far)
+        p.projection(right:0.2, aspect:Double(width / height), near:near, far:far)
         let mvp = Mat4()
         mvp.mult(m1)
-        mvp.mult(m2)
         mvp.mult(p)
         glUseProgram(program)
         var glmat4 = mvp.toGL()
