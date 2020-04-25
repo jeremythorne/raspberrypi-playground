@@ -6,6 +6,7 @@
 // gist.github.com/niw/5963798 - libpng code
 // https://www.songho.ca/opengl/gl_projectionmatrix.html
 // https://gamedev.stackexchange.com/questions/17171/for-voxel-rendering-what-is-more-efficient-pre-made-vbo-or-a-geometry-shader
+// https://stackoverflow.com/questions/8142388/in-what-order-should-i-send-my-vertices-to-opengl-for-culling
 #if os(OSX)
   import OpenGL
 #else
@@ -31,46 +32,46 @@ func key_callback(window: Optional<OpaquePointer>,
 }
 
 var cube: [[[GLbyte]]] = [
-     [
-     [1, 1, 1,  0, 0], 
+     [ // front
+     [0, 0, 1,  1, 1],
      [1, 0, 1,  0, 1], 
+     [1, 1, 1,  0, 0], 
      [0, 1, 1,  1, 0], 
-     [0, 0, 1,  1, 1]
      ], 
 
-     [
-     [0, 1, 0,  2, 0], 
+     [ //left
      [0, 0, 0,  2, 1],
-     [0, 1, 1,  1, 0], 
      [0, 0, 1,  1, 1], 
+     [0, 1, 1,  1, 0], 
+     [0, 1, 0,  2, 0], 
      ], 
 
-     [
-     [0, 1, 0,   2, 0], 
+     [ // back
+     [1, 0, 0,   3, 1],
      [0, 0, 0,   2, 1], 
+     [0, 1, 0,   2, 0], 
      [1, 1, 0,   3, 0], 
-     [1, 0, 0,   3, 1]
      ], 
 
-     [
-     [1, 1, 1,  4, 0], 
+     [ //right
      [1, 0, 1,  4, 1],
-     [1, 1, 0,  3, 0], 
      [1, 0, 0,  3, 1], 
+     [1, 1, 0,  3, 0], 
+     [1, 1, 1,  4, 0], 
      ], 
 
-     [
-     [0, 0, 1,  5, 1], 
+     [ // bottom
      [0, 0, 0,  5, 0], 
-     [1, 0, 1,  1, 1],
-     [1, 0, 0,  1, 0], 
+     [1, 0, 0,  6, 0], 
+     [1, 0, 1,  6, 1],
+     [0, 0, 1,  5, 1], 
      ], 
 
-     [
-     [0, 1, 0,  4, 1], 
+     [ //top
      [0, 1, 1,  4, 0], 
-     [1, 1, 0,  5, 1], 
      [1, 1, 1,  5, 0],
+     [1, 1, 0,  5, 1], 
+     [0, 1, 0,  4, 1], 
      ]
 ]
 
@@ -298,8 +299,7 @@ class App {
         glfwGetFramebufferSize(window, &iwidth, &iheight)
         glViewport(0, 0, iwidth, iheight)
         glEnable(GLenum(GL_DEPTH_TEST))
-        glCullFace(GLenum(GL_BACK))
-        //glEnable(GLenum(GL_CULL_FACE))
+        glEnable(GLenum(GL_CULL_FACE))
         self.width = Float(iwidth)
         self.height = Float(iheight)
         glClearColor(0.8, 0.8, 1.0, 1.0)
@@ -435,7 +435,7 @@ class App {
                 verts.append([v[0] + GLbyte(x), v[1] + GLbyte(y), v[2] + GLbyte(z), v[3], v[4]])
             }
 
-            for j in [0, 1, 2, 2, 1, 3] {
+            for j in [0, 1, 2, 0, 2, 3] {
                 vertices[i] += verts[j]
             }
         }
