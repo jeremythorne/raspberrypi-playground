@@ -17,10 +17,10 @@ let package = Package(
             name: "sgz",
             dependencies: ["clibs"]),
         .target(
-            name: "hello_sdl",
+            name: "hello",
             dependencies: ["sgz"]),
         .testTarget(
             name: "hello_sdlTests",
-            dependencies: ["hello_sdl"]),
+            dependencies: ["hello"]),
     ]
 )
