@@ -99,7 +99,7 @@ var vertex_shader_text = "#version 110\n"
 + "  gl_Position = mvp * vec4(pos, 1.0);\n"
 + "  vec4 p = mvp * vec4(pos, 1.0);\n"
 + "  v = p.y / p.w;\n"
-+ "  vtex_coord = tex_coord / vec2(6.0, 2.0);\n"
++ "  vtex_coord = tex_coord / vec2(6.0, 3.0);\n"
 + "  vsky = max(0.0, dot(normal, vec3(0.8, 0.7, 1.0)));\n"
 + "}\n"
 
@@ -384,14 +384,21 @@ class App {
 
         for z in 0..<depth {
             for x in 0..<width {
-                let h = map[x][z]
+                var h = map[x][z]
+                if h < 6 {
+                    h = 6
+                }
                 for y in 0..<height {
                     let t:Int
                     switch y {
                     case 0..<h:
                         t = 2
                     case h:
-                        t = 1
+                        if h <= 6 {
+                            t = 3
+                        }else {
+                            t = 1
+                        }
                     default:
                         t = 0
                     }
