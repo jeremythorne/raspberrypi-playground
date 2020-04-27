@@ -93,9 +93,12 @@ var vertex_shader_text = "#version 110\n"
 + "uniform mat4 mvp;\n"
 + "varying vec2 vtex_coord;\n"
 + "varying float vsky;\n"
++ "varying float v;\n"
 + "void main()\n"
 + "{\n"
 + "  gl_Position = mvp * vec4(pos, 1.0);\n"
++ "  vec4 p = mvp * vec4(pos, 1.0);\n"
++ "  v = p.y / p.w;\n"
 + "  vtex_coord = tex_coord / vec2(6.0, 2.0);\n"
 + "  vsky = max(0.0, dot(normal, vec3(0.8, 0.7, 1.0)));\n"
 + "}\n"
@@ -103,12 +106,13 @@ var vertex_shader_text = "#version 110\n"
 var fragment_shader_text = "#version 110\n"
 + "varying vec2 vtex_coord;\n"
 + "varying float vsky;\n"
++ "varying float v;\n"
 + "uniform sampler2D image;\n"
 + "void main()\n"
 + "{\n"
 + "  vec4 tex = texture2D(image, vtex_coord);\n"
 + "  vec3 ambient = vec3(0.2, 0.2, 0.2);\n"
-+ "  gl_FragColor = vec4((ambient + vsky) * tex.xyz, tex.w);\n"
++ "  gl_FragColor = vec4(vec3(1.0 + v), 0.0) + vec4((ambient + vsky) * tex.xyz, tex.w);\n"
 + "}\n"
 
 class Game {
@@ -200,9 +204,9 @@ class App {
 
     var width:Float = 0.0
     var height:Float = 0.0
-    let worldWidth = 65
+    let worldWidth = 64
     let worldHeight = 16
-    let worldDepth = 65
+    let worldDepth = 64
     let near = 1.0
     let far = 32.0
     var program:GLuint = 0
@@ -330,6 +334,14 @@ class App {
 
     func heightMap(width:Int, depth:Int, height:Int) -> [[Int]]
     {
+        func is_power_of_two(_ a:Int) -> Bool
+        {
+            return a > 0 && (a & (a - 1)) == 0
+        }
+
+        assert(is_power_of_two(width - 1))
+        assert(is_power_of_two(depth - 1))
+        // this algorithm only works if width and depth are 2^n + 1
         var h = [[Int]](repeating:[Int](repeating:0, count: depth), count: width)
         func diamondSquare(t:Int, l:Int, b:Int, r:Int, n:Int)
         {
@@ -368,7 +380,7 @@ class App {
         
         var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: height), count:width), count:depth)
 
-        let map = heightMap(width:width, depth:depth, height:height)
+        let map = heightMap(width:width + 1, depth:depth + 1, height:height)
 
         for z in 0..<depth {
             for x in 0..<width {
@@ -516,6 +528,10 @@ class App {
 
     func addCube(x:Int, y:Int, z:Int, type:Int)
     {
+        // vertex must fix in a byte
+        assert(x >= -128 && x < 127)
+        assert(y >= -128 && y < 127)
+        assert(z >= -128 && z < 127)
         let tv = GLbyte(type - 1)
         for i in 0..<6 {
             var verts = [[GLbyte]]()
