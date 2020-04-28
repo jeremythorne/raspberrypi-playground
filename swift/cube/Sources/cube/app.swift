@@ -340,38 +340,39 @@ class App {
         }
 
         assert(is_power_of_two(width - 1))
-        assert(is_power_of_two(depth - 1))
+        assert(width == depth)
         // this algorithm only works if width and depth are 2^n + 1
         var h = [[Int]](repeating:[Int](repeating:0, count: depth), count: width)
-        func diamondSquare(t:Int, l:Int, b:Int, r:Int, n:Int)
+        func diamondSquare(s:Int, n:Int)
         {
-            let mx = (l + r) / 2
-            let my = (t + b) / 2
+            let m = s / 2
             let n2 = n / 2
-            if mx <= l || mx >= r || my <= t || my >= b {
-                return
+            for x in stride(from: 0, to: width - s, by: s) {
+                for y in stride(from: 0, to: depth - s, by: s) {
+                    h[x + m][y + m] = max(1, min(height, (h[x][x] + 
+                                                          h[x + s][y + s] +
+                                                          h[x + s][y] +
+                                                          h[x][y + s]) / 4 + Int.random(in:-n2...n2)))
+                    h[x + m][y] = max(1, min(height, (h[x][y] + h[x + s][y]) / 2 + Int.random(in:-n2...n2)))
+                    h[x + m][y + s] = max(1, min(height, (h[x][y + s] + h[x + s][y + s]) / 2 + Int.random(in:-n2...n2))) 
+                    h[x][y + m] = max(1, min(height, (h[x][y] + h[x][y + s]) / 2 + Int.random(in:-n2...n2)))
+                    h[x + s][y + m] = max(1, min(height, (h[x + s][y] + h[x + s][y + s]) / 2 + Int.random(in:-n2...n2)))
+            
+                }
             }
-            h[mx][my] = max(1, min(height, (h[l][t] + h[l][b] + h[r][t] + h[r][b]) / 4 + Int.random(in:-n2...n2)))
-            h[mx][t] = max(1, min(height, (h[l][t] + h[r][t]) / 2 + Int.random(in:-n2...n2)))
-            h[mx][b] = max(1, min(height, (h[l][b] + h[r][b]) / 2 + Int.random(in:-n2...n2))) 
-            h[l][my] = max(1, min(height, (h[l][t] + h[l][b]) / 2 + Int.random(in:-n2...n2)))
-            h[r][my] = max(1, min(height, (h[r][t] + h[r][b]) / 2 + Int.random(in:-n2...n2)))
-            diamondSquare(t:t, l:l, b:my, r:mx, n:n2)
-            diamondSquare(t:t, l:mx, b:my, r:r, n:n2)
-            diamondSquare(t:my, l:l, b:b, r:mx, n:n2)
-            diamondSquare(t:my, l:mx, b:b, r:r, n:n2)
         }
 
-        let t = 0
-        let l = 0
-        let b = depth - 1
-        let r = width - 1
-        let n = height
-        h[l][t] = Int.random(in:1...n) 
-        h[l][b] = Int.random(in:1...n) 
-        h[r][t] = Int.random(in:1...n) 
-        h[r][b] = Int.random(in:1...n) 
-        diamondSquare(t:t, l:l, b:b, r:r, n:n/2)
+        var n = height
+        h[0][0] = Int.random(in:1...n) 
+        h[0][depth - 1] = Int.random(in:1...n) 
+        h[width - 1][0] = Int.random(in:1...n) 
+        h[width - 1][depth - 1] = Int.random(in:1...n)
+        var s = width - 1
+        while s > 1 {
+            n /= 2
+            diamondSquare(s:s, n:n)
+            s /= 2
+        }
         return h
     }
 
