@@ -24,13 +24,22 @@ func error_callback(error: Int32, description: Optional<UnsafePointer<Int8>>)
     }
 }
 
+var keys_pressed = [Int32:Bool]()
+
 func key_callback(window: Optional<OpaquePointer>,
                   key: Int32, scancode: Int32,
                   action: Int32, mods: Int32)
 {
-     if key == GLFW_KEY_ESCAPE && action == GLFW_PRESS {
+    if (action == GLFW_REPEAT ||
+        action == GLFW_PRESS) {
+        keys_pressed[key] = true
+    } else {
+        keys_pressed[key] = nil
+    }
+
+    if key == GLFW_KEY_ESCAPE && action == GLFW_PRESS {
         glfwSetWindowShouldClose(window, GLFW_TRUE)
-     }
+    }
 }
 
 var cube: [[[GLbyte]]] = [
@@ -200,6 +209,11 @@ class Mat4 {
     }
 }
 
+enum State {
+    case demo
+    case play
+}
+
 class App {
 
     var width:Float = 0.0
@@ -218,7 +232,13 @@ class App {
     var vertices:[[GLbyte]] = [[], [], [], [], [], []]
     var window_o:OpaquePointer?
     var game_o:Game? = nil
-
+    var map = [[Int]]()
+    var state = State.demo
+    var px:Double = 0
+    var py:Double = 0
+    var pz:Double = 0
+    var pa:Double = 0
+        
     deinit
     {
         if let window = window_o {
@@ -381,13 +401,14 @@ class App {
         
         var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: height), count:width), count:depth)
 
-        let map = heightMap(width:width + 1, depth:depth + 1, height:height)
+        map = heightMap(width:width + 1, depth:depth + 1, height:height)
 
         for z in 0..<depth {
             for x in 0..<width {
                 var h = map[x][z]
                 if h < 6 {
                     h = 6
+                    map[x][z] = 6
                 }
                 for y in 0..<height {
                     let t:Int
@@ -451,15 +472,45 @@ class App {
         func update()
         {
             game_o?.update()
+
+            switch state {
+            case .demo:
+                pa += 0.01
+                px = Double(worldWidth) / 2 + 40 * cos(pa)
+                pz = Double(worldDepth) / 2 + 40 * sin(pa)
+                py = Double(worldHeight)
+                if keys_pressed[GLFW_KEY_SPACE] ?? false {
+                    state = .play
+                    px = Double(worldWidth) / 2
+                    pz = Double(worldDepth) / 2
+
+                }
+            case .play:
+                if keys_pressed[GLFW_KEY_LEFT]  ?? false {
+                    pa -= 0.01
+                } else if keys_pressed[GLFW_KEY_RIGHT]  ?? false {
+                    pa += 0.01
+                }
+                if keys_pressed[GLFW_KEY_UP]  ?? false {
+                    px -= 0.1 * cos(pa)
+                    pz -= 0.1 * sin(pa)
+                } else if keys_pressed[GLFW_KEY_DOWN]  ?? false {
+                    px += 0.1 * cos(pa)
+                    pz += 0.1 * sin(pa)
+                }
+                px = (min(Double(worldWidth), max(0, px)))
+                pz = (min(Double(worldDepth), max(0, pz)))
+                py = Double(map[Int(px)][Int(pz)]) + 2.5
+            }
         }
 
-        var rad = 0.0
         func draw()
         {
             glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
             game_o?.draw()
-            rad += 0.01
-            drawCubes(rotate:rad, x:Double(-worldWidth) / 2, y:Double(-worldHeight), z:Double(-worldDepth) / 2)
+
+            
+            drawCubes(rotate:pa, x:px, y:py, z:pz)
         }
 
         print("starting loop")
@@ -575,13 +626,10 @@ class App {
     func drawCubes(rotate:Double, x:Double, y:Double, z:Double)
     {
         let m1 = Mat4()
-        m1.translate(x, y, z)
+        m1.translate(-x, -y, -z)
         let m2 = Mat4()
         m2.rotatey(rad:rotate)
         m1.mult(m2)
-        let m3 = Mat4()
-        m3.translate(0, 0, -20)
-        m1.mult(m3)
         let p = Mat4()
         p.projection(right:0.2, aspect:Double(width / height), near:near, far:far)
         let mvp = Mat4()
