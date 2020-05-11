@@ -89,7 +89,8 @@ var fragment_shader_text = "#version 110\n"
 
 class Chunk {
     var vertex_buffer: [GLuint] = [0, 0, 0, 0, 0, 0]
-    var vertices:[[GLbyte]] = [[], [], [], [], [], []]
+    var bytes:[[GLbyte]] = [[], [], [], [], [], []]
+    var vertex_count:Int = 0
 
     init(xoff:Int, zoff:Int, world:[[[Int]]]) {
         let width = world[0].count
@@ -142,9 +143,10 @@ class Chunk {
             }
 
             for j in [0, 1, 2, 0, 2, 3] {
-                vertices[i] += verts[j]
+                bytes[i] += verts[j]
             }
         }
+        vertex_count += 6
     }
 
     func uploadCubes()
@@ -152,8 +154,8 @@ class Chunk {
         for i in 0..<6 {
             glBindBuffer(GLenum(GL_ARRAY_BUFFER), vertex_buffer[i])
             glBufferData(GLenum(GL_ARRAY_BUFFER),
-                         GLsizeiptr(MemoryLayout<GLbyte>.size * Int(vertices[i].count)),
-                                               vertices[i], GLenum(GL_STATIC_DRAW))
+                         GLsizeiptr(MemoryLayout<GLbyte>.size * Int(bytes[i].count)),
+                                               bytes[i], GLenum(GL_STATIC_DRAW))
         }
     }
 
@@ -319,8 +321,7 @@ class World {
             enableAttrib(loc:tex_coord_location, num:2, off:3, stride:5)
             // FIXME there's some issue in the VC4 driver that doesn't like it
             // if the vertex count is too big
-            //glDrawArrays(GLenum(GL_TRIANGLES), 0, GLsizei(chunk.vertices[i].count))
-            glDrawArrays(GLenum(GL_TRIANGLES), 0, GLsizei(3030))
+            glDrawArrays(GLenum(GL_TRIANGLES), 0, GLsizei(chunk.vertex_count))
         }
     }
 }
