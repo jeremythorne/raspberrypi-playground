@@ -91,8 +91,12 @@ class Chunk {
     var vertex_buffer: [GLuint] = [0, 0, 0, 0, 0, 0]
     var bytes:[[GLbyte]] = [[], [], [], [], [], []]
     var vertex_count:Int = 0
+    var xoff:Int
+    var zoff:Int
 
     init(xoff:Int, zoff:Int, world:[[[Int]]]) {
+        self.xoff = xoff
+        self.zoff = zoff
         let width = world[0].count
         let depth = world.count
         let height = world[0][0].count
@@ -115,7 +119,7 @@ class Chunk {
             for x in xoff..<(xoff + 16) {
                 for y in 0..<height {
                     if world[z][x][y] != 0 && !occluded(x, y, z) {
-                        addCube(x:x, y:y, z:z, type:world[z][x][y])
+                        addCube(x:x - xoff, y:y, z:z - zoff, type:world[z][x][y])
                     }
                 }
             }
@@ -163,9 +167,9 @@ class Chunk {
 
 class World {
 
-    let worldWidth = 64
+    let worldWidth = 128
     let worldHeight = 16
-    let worldDepth = 64
+    let worldDepth = 128
     var program:GLuint = 0
     var pos_location:GLint = 0
     var normal_location:GLint = 0 
@@ -300,27 +304,29 @@ class World {
 
     }
 
-    func draw(mvp:Mat4)
+    func draw(vp:Mat4)
     {
         glUseProgram(program)
-        var glmat4 = mvp.toGL()
-        glUniformMatrix4fv(mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
 
         for i in 0..<chunks.count {
             for j in 0..<chunks[i].count {
-                drawChunk(chunk:chunks[i][j])
+                drawChunk(vp:vp, chunk:chunks[i][j])
             }
         }
     }
 
-    func drawChunk(chunk:Chunk) {
+    func drawChunk(vp:Mat4, chunk:Chunk) {
+        let mvp = Mat4()
+        mvp.translate(Double(chunk.xoff), 0, Double(chunk.zoff))
+        mvp.mult(vp)
+        var glmat4 = mvp.toGL()
+        glUniformMatrix4fv(mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
+
         for i in 0..<6 {
             glUniform3fv(normal_location, 1, normals[i])
             glBindBuffer(GLenum(GL_ARRAY_BUFFER), chunk.vertex_buffer[i])
             enableAttrib(loc:pos_location, num:3, off:0, stride:5)
             enableAttrib(loc:tex_coord_location, num:2, off:3, stride:5)
-            // FIXME there's some issue in the VC4 driver that doesn't like it
-            // if the vertex count is too big
             glDrawArrays(GLenum(GL_TRIANGLES), 0, GLsizei(chunk.vertex_count))
         }
     }

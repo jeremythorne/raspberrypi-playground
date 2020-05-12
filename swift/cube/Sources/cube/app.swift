@@ -201,11 +201,11 @@ class App {
         m1.mult(m2)
         let p = Mat4()
         p.projection(right:0.2, aspect:Double(width / height), near:near, far:far)
-        let mvp = Mat4()
-        mvp.mult(m1)
-        mvp.mult(p)
+        let vp = Mat4()
+        vp.mult(m1)
+        vp.mult(p)
 
-        world.draw(mvp:mvp)
+        world.draw(vp:vp)
     }
 
     func loop()
