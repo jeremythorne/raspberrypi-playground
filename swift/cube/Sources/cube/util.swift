@@ -17,7 +17,10 @@ class Mat4 {
         0.0, 0.0, 1.0, 0.0,
         0.0, 0.0, 0.0, 1.0 ]
 
-    func mult(_ b:Mat4) {
+    init() {
+    }
+
+    func mult(_ b:Mat4) -> Mat4 {
         let c = [
             a[0] * b.a[0] + a[1] * b.a[4] + a[2] * b.a[8] + a[3] * b.a[12],
             a[0] * b.a[1] + a[1] * b.a[5] + a[2] * b.a[9] + a[3] * b.a[13],
@@ -40,9 +43,11 @@ class Mat4 {
             a[12] * b.a[3] + a[13] * b.a[7] + a[14] * b.a[11] + a[15] * b.a[15],
         ]
         a = c
+        return self
     }
 
-    func projection(right:Double, aspect:Double, near:Double, far:Double) {
+    init (projection:(right:Double, aspect:Double, near:Double, far:Double)) {
+        let (right, aspect, near, far) = projection
         for i in 0..<16 {
             a[i] = 0
         }
@@ -54,13 +59,13 @@ class Mat4 {
         a[14] = -1
     }
 
-    func translate(_ x:Double, _ y:Double, _ z:Double) {
-        a[12] = x
-        a[13] = y
-        a[14] = z
+    init(translate t:(x:Double, y:Double, z:Double)) {
+        a[12] = t.x
+        a[13] = t.y
+        a[14] = t.z
     }
 
-    func rotatey(rad:Double) {
+    init(rotatey rad:Double) {
         a[0] = sin(rad)
         a[2] = cos(rad)
         a[8] = -cos(rad)
@@ -78,6 +83,11 @@ class Mat4 {
     }
 }
 
+extension Mat4 {
+    static func * (left:Mat4, right:Mat4) -> Mat4 {
+        return left.mult(right)
+    }
+}
 
 func compileShader(text:String, shader_type:GLenum) -> GLuint? {
     let shader = glCreateShader(shader_type)

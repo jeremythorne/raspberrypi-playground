@@ -194,16 +194,8 @@ class App {
         glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
         game_o?.draw()
 
-        let m1 = Mat4()
-        m1.translate(-px, -py, -pz)
-        let m2 = Mat4()
-        m2.rotatey(rad:pa)
-        m1.mult(m2)
-        let p = Mat4()
-        p.projection(right:0.2, aspect:Double(width / height), near:near, far:far)
-        let vp = Mat4()
-        vp.mult(m1)
-        vp.mult(p)
+        let p = Mat4(projection:(right:0.2, aspect:Double(width / height), near:near, far:far))
+        let vp = Mat4(translate:(-px, -py, -pz)) * Mat4(rotatey:pa) * p
 
         world.draw(vp:vp)
     }

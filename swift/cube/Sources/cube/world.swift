@@ -316,9 +316,7 @@ class World {
     }
 
     func drawChunk(vp:Mat4, chunk:Chunk) {
-        let mvp = Mat4()
-        mvp.translate(Double(chunk.xoff), 0, Double(chunk.zoff))
-        mvp.mult(vp)
+        let mvp = Mat4(translate:(Double(chunk.xoff), 0, Double(chunk.zoff))) * vp
         var glmat4 = mvp.toGL()
         glUniformMatrix4fv(mvp_location, 1, GLboolean(GL_FALSE), &glmat4)
 
