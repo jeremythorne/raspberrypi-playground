@@ -42,6 +42,14 @@ func key_callback(window: Optional<OpaquePointer>,
     }
 }
 
+enum KeyCode:Int32 {
+    case Space = 32 // GLFW_KEY_SPACE
+    case Left = 263 // GLFW_KEY_LEFT
+    case Right = 262 // GLFW_KEY_RIGHT
+    case Up = 265 // GLFW_KEY_UP
+    case Down = 264 // GLFW_KEY_DOWN
+}
+
 class Game {
     func setup () {
     }
@@ -49,13 +57,8 @@ class Game {
     func update () {
     }
 
-    func draw () {
+    func draw (viewProjection:Mat4) {
     }
-}
-
-enum State {
-    case demo
-    case play
 }
 
 class App {
@@ -66,8 +69,7 @@ class App {
     let near = 1.0
     let far = 32.0
     var window_o:OpaquePointer?
-    var game_o:Game? = nil
-    var state = State.demo
+    var game:Game!
     var px:Double = 0
     var py:Double = 0
     var pz:Double = 0
@@ -83,7 +85,7 @@ class App {
 
     func run(game:Game)
     {
-        game_o = game
+        self.game = game
         if !setup() {
             return
         }
@@ -144,7 +146,7 @@ class App {
             return false
         }
 
-        game_o?.setup()
+        game.setup()
 
         let err = glGetError()
         if err != 0 {
@@ -156,48 +158,44 @@ class App {
 
     func update()
     {
-        game_o?.update()
+        game.update()
 
-        switch state {
-        case .demo:
-            pa += 0.01
-            px = Double(world.worldWidth) / 2 + 40 * cos(pa)
-            pz = Double(world.worldDepth) / 2 + 40 * sin(pa)
-            py = Double(world.worldHeight)
-            if keys_pressed[GLFW_KEY_SPACE] ?? false {
-                state = .play
-                px = Double(world.worldWidth) / 2
-                pz = Double(world.worldDepth) / 2
-
-            }
-        case .play:
-            if keys_pressed[GLFW_KEY_LEFT]  ?? false {
-                pa -= 0.01
-            } else if keys_pressed[GLFW_KEY_RIGHT]  ?? false {
-                pa += 0.01
-            }
-            if keys_pressed[GLFW_KEY_UP]  ?? false {
-                px -= 0.1 * cos(pa)
-                pz -= 0.1 * sin(pa)
-            } else if keys_pressed[GLFW_KEY_DOWN]  ?? false {
-                px += 0.1 * cos(pa)
-                pz += 0.1 * sin(pa)
-            }
-            px = (min(Double(world.worldWidth), max(0, px)))
-            pz = (min(Double(world.worldDepth), max(0, pz)))
-            py = Double(world.map[Int(px)][Int(pz)]) + 2.5
-        }
     }
 
     func draw()
     {
         glClear(GLbitfield(GL_COLOR_BUFFER_BIT) | GLbitfield(GL_DEPTH_BUFFER_BIT))
-        game_o?.draw()
 
         let p = Mat4(projection:(right:0.2, aspect:Double(width / height), near:near, far:far))
         let vp = Mat4(translate:(-px, -py, -pz)) * Mat4(rotatey:pa) * p
 
         world.draw(vp:vp)
+        game.draw(viewProjection:vp)
+    }
+
+    func worldSize() -> Vec3 {
+        return Vec3(x:Double(world.worldWidth),
+                    y:Double(world.worldHeight), 
+                    z:Double(world.worldDepth))
+    }
+
+    func setCamera(p:Vec3, az:Double) {
+        px = p.x
+        py = p.y
+        pz = p.z
+        pa = az
+    }
+    
+    func keyPressed(key:KeyCode) -> Bool {
+        return keys_pressed[key.rawValue] ?? false
+    }
+
+    func mapHeight(x:Double, z:Double) -> Double {
+        if x < 0 || Int(x) >= world.worldWidth ||
+            z < 0 || Int(z) >= world.worldDepth {
+                return 0
+            }
+        return Double(world.map[Int(x)][Int(z)])
     }
 
     func loop()

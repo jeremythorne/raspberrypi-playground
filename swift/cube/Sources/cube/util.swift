@@ -10,6 +10,24 @@ struct Image {
     var texture:GLuint = 0
 }
 
+struct Vec3 {
+    var x:Double = 0
+    var y:Double = 0
+    var z:Double = 0
+
+    func add (_ b:Vec3) -> Vec3 {
+        return Vec3(x:x + b.x,
+                    y:y + b.y,
+                    z:z + b.z)
+    }
+}
+
+extension Vec3 {
+    static func + (left:Vec3, right:Vec3) -> Vec3 {
+        return left.add(right)
+    }
+}
+
 class Mat4 {
     var a = [
         1.0, 0.0, 0.0, 0.0,
