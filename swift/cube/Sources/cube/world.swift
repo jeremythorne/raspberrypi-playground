@@ -87,28 +87,44 @@ var fragment_shader_text = "#version 110\n"
 + "  gl_FragColor = fog + vec4((ambient + vsky) * tex.xyz, tex.w);\n"
 + "}\n"
 
+enum CubeType:Int {
+    case sky = 0
+    case grass = 1
+    case stone = 2
+    case water = 3
+}
+
+struct Cube {
+    var type:CubeType = .sky
+    var occluded:Bool = false
+}
+
 class Chunk {
     var vertex_buffer: [GLuint] = [0, 0, 0, 0, 0, 0]
     var bytes:[[GLbyte]] = [[], [], [], [], [], []]
+    var cubes:[[[Cube]]]
     var vertex_count:Int = 0
     var xoff:Int
     var zoff:Int
+    var height:Int
 
-    init(xoff:Int, zoff:Int, world:[[[Int]]]) {
+    init(xoff:Int, zoff:Int, world:[[[CubeType]]]) {
         self.xoff = xoff
         self.zoff = zoff
         let width = world[0].count
         let depth = world.count
-        let height = world[0][0].count
+        height = world[0][0].count
+        let sky = Cube()
+        cubes = [[[Cube]]](repeating:[[Cube]](repeating:[Cube](repeating:sky, count: height), count:16), count:16)
 
         func occluded(_ x:Int, _ y:Int, _ z:Int) -> Bool {
             if x == 0 || x == (width - 1) || z == 0 || z == (depth - 1) || y == 0 || y == (height - 1) ||
-                   world[z - 1][x][y] == 0 ||
-                   world[z + 1][x][y] == 0 ||
-                   world[z][x - 1][y] == 0 ||
-                   world[z][x + 1][y] == 0 ||
-                   world[z][x][y - 1] == 0 ||
-                   world[z][x][y + 1] == 0 {
+                   world[z - 1][x][y] == .sky ||
+                   world[z + 1][x][y] == .sky ||
+                   world[z][x - 1][y] == .sky ||
+                   world[z][x + 1][y] == .sky ||
+                   world[z][x][y - 1] == .sky ||
+                   world[z][x][y + 1] == .sky {
                        // not completely occluded
                        return false
             }
@@ -118,8 +134,23 @@ class Chunk {
         for z in zoff..<(zoff + 16) {
             for x in xoff..<(xoff + 16) {
                 for y in 0..<height {
-                    if world[z][x][y] != 0 && !occluded(x, y, z) {
-                        addCube(x:x - xoff, y:y, z:z - zoff, type:world[z][x][y])
+                    cubes[z - zoff][x - xoff][y].type = world[z][x][y]
+                    cubes[z - zoff][x - xoff][y].occluded = occluded(x, y, z)
+                }
+            }
+        }
+
+        makeGeometry()
+
+    }
+
+    func makeGeometry() {
+        for z in 0..<16 {
+            for x in 0..<16 {
+                for y in 0..<height {
+                    let cube = cubes[z][x][y]
+                    if cube.type != .sky && !cube.occluded {
+                        addCubeVertices(x:x, y:y, z:z, type:cube.type)
                     }
                 }
             }
@@ -129,16 +160,16 @@ class Chunk {
             glGenBuffers(1, &vertex_buffer[i])
         }
 
-        uploadCubes()
+        uploadCubeVertices()
     }
 
-    func addCube(x:Int, y:Int, z:Int, type:Int)
+    func addCubeVertices(x:Int, y:Int, z:Int, type:CubeType)
     {
         // vertex must fix in a byte
         assert(x >= -128 && x < 127)
         assert(y >= -128 && y < 127)
         assert(z >= -128 && z < 127)
-        let tv = GLbyte(type - 1)
+        let tv = GLbyte(type.rawValue - 1)
         for i in 0..<6 {
             var verts = [[GLbyte]]()
             for j in 0..<4 {
@@ -153,7 +184,7 @@ class Chunk {
         vertex_count += 6
     }
 
-    func uploadCubes()
+    func uploadCubeVertices()
     {
         for i in 0..<6 {
             glBindBuffer(GLenum(GL_ARRAY_BUFFER), vertex_buffer[i])
@@ -264,7 +295,7 @@ class World {
     func makeWorld(width:Int, depth:Int, height:Int)
     {
         
-        var world = [[[Int]]](repeating:[[Int]](repeating:[Int](repeating:0, count: height), count:width), count:depth)
+        var world = [[[CubeType]]](repeating:[[CubeType]](repeating:[CubeType](repeating:.sky, count: height), count:width), count:depth)
 
         map = heightMap(width:width + 1, depth:depth + 1, height:height)
 
@@ -276,18 +307,18 @@ class World {
                     map[x][z] = 6
                 }
                 for y in 0..<height {
-                    let t:Int
+                    let t:CubeType
                     switch y {
                     case 0..<h:
-                        t = 2
+                        t = .stone
                     case h:
                         if h <= 6 {
-                            t = 3
+                            t = .water
                         }else {
-                            t = 1
+                            t = .grass
                         }
                     default:
-                        t = 0
+                        t = .sky
                     }
                     world[z][x][y] = t
                 }
